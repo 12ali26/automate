@@ -7,29 +7,25 @@ import type { ReactNode } from 'react'
  * nothing (`aria-disabled`, no handler). The checkout / check-in flows are
  * Stage 4.
  *
- * Sizing follows the mobile-first budget: primary ~56px tall and full width in
- * the thumb zone; secondary a quiet text-weight control, still 44px tall.
+ * - primary: ~56px tall, full width, in the thumb zone
+ * - secondary: a quiet neutral control — grey, no underline, still a 44px tap
+ *   target. "Report a fault" is a legitimate secondary action, not a warning,
+ *   so it must not read as red/destructive.
  */
 export function ActionButton({
   children,
   variant,
-  tone = 'default',
 }: {
   children: ReactNode
   variant: 'primary' | 'secondary'
-  tone?: 'default' | 'danger'
 }) {
-  const common = 'w-full select-none rounded-xl text-center font-bold cursor-not-allowed'
-
   if (variant === 'primary') {
-    const toneClass =
-      tone === 'danger' ? 'bg-red-600 text-white' : 'bg-gray-950 text-white'
     return (
       <button
         type="button"
         aria-disabled="true"
         tabIndex={-1}
-        className={`${common} min-h-14 px-6 text-xl ${toneClass}`}
+        className="w-full min-h-14 cursor-not-allowed select-none rounded-xl bg-gray-950 px-6 text-center text-xl font-bold text-white"
       >
         {children}
       </button>
@@ -41,9 +37,7 @@ export function ActionButton({
       type="button"
       aria-disabled="true"
       tabIndex={-1}
-      className={`${common} min-h-11 px-4 py-2 text-lg underline underline-offset-4 ${
-        tone === 'danger' ? 'text-red-700' : 'text-gray-700'
-      }`}
+      className="w-full min-h-11 cursor-not-allowed select-none rounded-lg px-4 py-2 text-center text-base font-semibold text-gray-600 active:bg-gray-100"
     >
       {children}
     </button>

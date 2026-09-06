@@ -1,6 +1,6 @@
 import { loadEnvConfig } from '@next/env'
 
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 
 import { db } from '../lib/db'
 import {
@@ -125,8 +125,21 @@ async function seed() {
     .onConflictDoNothing({ target: [machines.orgId, machines.code] })
 
   // --- employees ----------------------------------------------------
-  // FM IDs 1001-1010, nine staff and one manager. Idempotent via the
-  // (org_id, fm_id) unique constraint.
+  // FM IDs 1001-1010: nine staff and one manager (1010). 1001 is the test
+  // account. Realistic names because the app shows full_name to staff trying
+  // to locate a machine ("checked out by James O'Brien").
+  const employeeNames: Record<string, string> = {
+    '1001': 'Maria Santos',
+    '1002': "James O'Brien",
+    '1003': 'Priya Patel',
+    '1004': 'David Okafor',
+    '1005': 'Anna Kowalski',
+    '1006': 'Wei Chen',
+    '1007': 'Fatima Hassan',
+    '1008': 'Tom Bradley',
+    '1009': 'Grace Mensah',
+    '1010': 'Robert Adeyemi',
+  }
   await db
     .insert(employees)
     .values(
@@ -134,13 +147,18 @@ async function seed() {
         const fmId = String(1001 + i)
         return {
           orgId: org.id,
-          fullName: `Employee ${fmId}`,
+          fullName: employeeNames[fmId] ?? `Employee ${fmId}`,
           fmId,
           role: i === 9 ? 'manager' : 'staff',
         }
       }),
     )
-    .onConflictDoNothing({ target: [employees.orgId, employees.fmId] })
+    // Update on conflict so re-seeding a DB that still has the old
+    // "Employee 1001" placeholder names converges to the real names.
+    .onConflictDoUpdate({
+      target: [employees.orgId, employees.fmId],
+      set: { fullName: sql`excluded.full_name`, role: sql`excluded.role` },
+    })
 
   // --- machine states (Stage 3: one machine per rendering) ------------
   // Re-read machines and employees now that they exist.

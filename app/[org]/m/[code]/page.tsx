@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 
 import { MachineHeader } from '@/components/machine/MachineHeader'
 import { MachineStateView, type MachineView } from '@/components/machine/MachineStateView'
-import { StateBadge, type BadgeState } from '@/components/machine/StateBadge'
+import { MachineStatus, type MachineStatusView } from '@/components/machine/MachineStatus'
 import { withOrgContext } from '@/lib/auth/org-context'
 import { requireStaffSession } from '@/lib/auth/session'
 import { formatDuration } from '@/lib/domain/duration'
@@ -36,8 +36,7 @@ export default async function MachinePage({
     // Never disclose whether the code exists in another org.
     if (!machine || !machine.active) return null
 
-    // Sequential: a transaction is a single connection, so repo calls here run
-    // one after another.
+    // Sequential: a transaction is a single connection.
     const checkout = await checkoutsRepo.findOpenForMachine(tx, machine.id)
     const incident = await incidentsRepo.findOpenForMachine(tx, machine.id)
 
@@ -81,18 +80,19 @@ export default async function MachinePage({
     view = { state: 'available' }
   }
 
-  const badge: BadgeState =
-    view.state === 'faulty' ? 'faulty' : view.state === 'available' ? 'available' : 'out'
+  // The status/location line. A checked-out machine shows no location — it is
+  // with its holder, not at its last return spot.
+  const statusView: MachineStatusView =
+    view.state === 'faulty'
+      ? { state: 'faulty', locationName: location?.name ?? null, offStore }
+      : view.state === 'available'
+        ? { state: 'available', locationName: location?.name ?? null, offStore }
+        : { state: 'checked_out' }
 
   return (
-    <main className="flex flex-1 flex-col gap-5 p-5">
-      <MachineHeader
-        name={machine.name}
-        code={machine.code}
-        locationName={location?.name ?? null}
-        locationOffStore={offStore}
-      />
-      <StateBadge state={badge} />
+    <main className="flex flex-1 flex-col gap-4 p-5">
+      <MachineHeader name={machine.name} code={machine.code} />
+      <MachineStatus view={statusView} />
       <MachineStateView view={view} />
     </main>
   )
