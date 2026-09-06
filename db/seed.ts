@@ -1,7 +1,10 @@
-import 'dotenv/config'
+import { loadEnvConfig } from '@next/env'
 
 import { db } from '../lib/db'
 import { orgs } from './schema'
+
+// Load env the same way Next.js does: .env, then .env.local (gitignored) wins.
+loadEnvConfig(process.cwd())
 
 async function seed() {
   // Idempotent: the unique slug means re-running is a no-op.

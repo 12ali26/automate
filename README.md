@@ -55,13 +55,18 @@ Requires Node 20+ and pnpm 10+.
 2. **Configure the database connection**
 
    ```bash
-   cp .env.example .env
+   cp .env.example .env.local
    ```
 
-   Edit `.env` and set `DATABASE_URL` to your Supabase Postgres connection
-   string (Supabase dashboard → Project Settings → Database → Connection
-   string → URI). Use the direct connection (port 5432) for migrations and
-   seeding. `.env` is gitignored.
+   Edit `.env.local` and set `DATABASE_URL` to your Supabase Postgres
+   connection string (Supabase dashboard → Project Settings → Database →
+   Connection string → URI), replacing the `PASSWORD` and `HOST` placeholders
+   with the real values. Use the direct connection (port 5432) for migrations
+   and seeding.
+
+   `.env.local` is gitignored and is read by `next dev`, `pnpm db:migrate`,
+   and `pnpm db:seed` alike (all three load env via `@next/env`, so `.env`
+   also works and `.env.local` overrides it).
 
 3. **Apply the migration**
 

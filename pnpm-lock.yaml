@@ -30,6 +30,9 @@ importers:
         specifier: ^4.5.4
         version: 4.5.4
     devDependencies:
+      '@next/env':
+        specifier: ^16.3.4
+        version: 16.3.4
       '@tailwindcss/postcss':
         specifier: ^4.3.3
         version: 4.3.3
@@ -42,9 +45,6 @@ importers:
       '@types/react-dom':
         specifier: ^19.2.7
         version: 19.2.7(@types/react@19.2.18)
-      dotenv:
-        specifier: ^17.4.2
-        version: 17.4.2
       drizzle-kit:
         specifier: ^0.31.10
         version: 0.31.10
@@ -706,6 +706,9 @@ packages:
   '@next/env@15.5.25':
     resolution: {integrity: sha512-42h1lLr07vl4gawALP1hsgRZjHB1xYa58JfUfHwr0f7jG/zhPakh5GHkADHXOC9ZxUvlQFOPIrp7s6qX4DezPQ==}
 
+  '@next/env@16.3.4':
+    resolution: {integrity: sha512-cjWZnUUa6jZq2kFaNe/ZyJdZonOZ/QoN0Zka2nz/FLOrfx14pQuM9c5RaSVkWMqgdt4ksgPAMWPyHSs/CyV48Q==}
+
   '@next/swc-darwin-arm64@15.5.25':
     resolution: {integrity: sha512-w+RR0v/QuApnWEjRGm1z6gcObKwGMb5YPA7V3bzBEVSBpMFUXprer0tS27UxjUcEnqbhL7Zuzohej79B6rYmBg==}
     engines: {node: '>= 10'}
@@ -879,10 +882,6 @@ packages:
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
-
-  dotenv@17.4.2:
-    resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
-    engines: {node: '>=12'}
 
   drizzle-kit@0.31.10:
     resolution: {integrity: sha512-7OZcmQUrdGI+DUNNsKBn1aW8qSoKuTH7d0mYgSP8bAzdFzKoovxEFnoGQp2dVs82EOJeYycqRtciopszwUf8bw==}
@@ -1585,6 +1584,8 @@ snapshots:
 
   '@next/env@15.5.25': {}
 
+  '@next/env@16.3.4': {}
+
   '@next/swc-darwin-arm64@15.5.25':
     optional: true
 
@@ -1703,8 +1704,6 @@ snapshots:
   csstype@3.2.3: {}
 
   detect-libc@2.1.2: {}
-
-  dotenv@17.4.2: {}
 
   drizzle-kit@0.31.10:
     dependencies:
