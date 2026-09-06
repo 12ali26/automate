@@ -1,0 +1,1348 @@
+{
+  "id": "7702ece0-ab8c-415d-92bb-14adb4309a2f",
+  "prevId": "5f251e3e-665d-463f-94f9-f17dc740eb24",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.activity_log": {
+      "name": "activity_log",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "machine_id": {
+          "name": "machine_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "detail": {
+          "name": "detail",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "activity_log_org_id_created_at_idx": {
+          "name": "activity_log_org_id_created_at_idx",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "activity_log_machine_id_created_at_idx": {
+          "name": "activity_log_machine_id_created_at_idx",
+          "columns": [
+            {
+              "expression": "machine_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "activity_log_org_id_orgs_id_fk": {
+          "name": "activity_log_org_id_orgs_id_fk",
+          "tableFrom": "activity_log",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "tableTo": "orgs",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "activity_log_machine_id_machines_id_fk": {
+          "name": "activity_log_machine_id_machines_id_fk",
+          "tableFrom": "activity_log",
+          "columnsFrom": [
+            "machine_id"
+          ],
+          "tableTo": "machines",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "activity_log_employee_id_employees_id_fk": {
+          "name": "activity_log_employee_id_employees_id_fk",
+          "tableFrom": "activity_log",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "tableTo": "employees",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.checklist_items": {
+      "name": "checklist_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "template_id": {
+          "name": "template_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "blocking": {
+          "name": "blocking",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {
+        "checklist_items_template_id_sort_order_idx": {
+          "name": "checklist_items_template_id_sort_order_idx",
+          "columns": [
+            {
+              "expression": "template_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sort_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "checklist_items_org_id_orgs_id_fk": {
+          "name": "checklist_items_org_id_orgs_id_fk",
+          "tableFrom": "checklist_items",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "tableTo": "orgs",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "checklist_items_template_id_checklist_templates_id_fk": {
+          "name": "checklist_items_template_id_checklist_templates_id_fk",
+          "tableFrom": "checklist_items",
+          "columnsFrom": [
+            "template_id"
+          ],
+          "tableTo": "checklist_templates",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.checklist_responses": {
+      "name": "checklist_responses",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checkout_id": {
+          "name": "checkout_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "item_id": {
+          "name": "item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "passed": {
+          "name": "passed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "checklist_responses_org_id_orgs_id_fk": {
+          "name": "checklist_responses_org_id_orgs_id_fk",
+          "tableFrom": "checklist_responses",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "tableTo": "orgs",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "checklist_responses_checkout_id_checkouts_id_fk": {
+          "name": "checklist_responses_checkout_id_checkouts_id_fk",
+          "tableFrom": "checklist_responses",
+          "columnsFrom": [
+            "checkout_id"
+          ],
+          "tableTo": "checkouts",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "checklist_responses_item_id_checklist_items_id_fk": {
+          "name": "checklist_responses_item_id_checklist_items_id_fk",
+          "tableFrom": "checklist_responses",
+          "columnsFrom": [
+            "item_id"
+          ],
+          "tableTo": "checklist_items",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "checklist_responses_checkout_id_item_id_unique": {
+          "name": "checklist_responses_checkout_id_item_id_unique",
+          "columns": [
+            "checkout_id",
+            "item_id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.checklist_templates": {
+      "name": "checklist_templates",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "checklist_templates_org_id_orgs_id_fk": {
+          "name": "checklist_templates_org_id_orgs_id_fk",
+          "tableFrom": "checklist_templates",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "tableTo": "orgs",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.checkouts": {
+      "name": "checkouts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "machine_id": {
+          "name": "machine_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "opened_at": {
+          "name": "opened_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "return_location_id": {
+          "name": "return_location_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "one_open_checkout_per_machine": {
+          "name": "one_open_checkout_per_machine",
+          "columns": [
+            {
+              "expression": "machine_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"checkouts\".\"closed_at\" is null",
+          "concurrently": false
+        },
+        "checkouts_org_id_opened_at_idx": {
+          "name": "checkouts_org_id_opened_at_idx",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "opened_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "checkouts_org_id_orgs_id_fk": {
+          "name": "checkouts_org_id_orgs_id_fk",
+          "tableFrom": "checkouts",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "tableTo": "orgs",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "checkouts_machine_id_machines_id_fk": {
+          "name": "checkouts_machine_id_machines_id_fk",
+          "tableFrom": "checkouts",
+          "columnsFrom": [
+            "machine_id"
+          ],
+          "tableTo": "machines",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "checkouts_employee_id_employees_id_fk": {
+          "name": "checkouts_employee_id_employees_id_fk",
+          "tableFrom": "checkouts",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "tableTo": "employees",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "checkouts_return_location_id_locations_id_fk": {
+          "name": "checkouts_return_location_id_locations_id_fk",
+          "tableFrom": "checkouts",
+          "columnsFrom": [
+            "return_location_id"
+          ],
+          "tableTo": "locations",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "checkouts_closed_at_after_opened_at_check": {
+          "name": "checkouts_closed_at_after_opened_at_check",
+          "value": "\"checkouts\".\"closed_at\" is null or \"checkouts\".\"closed_at\" >= \"checkouts\".\"opened_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.discrepancies": {
+      "name": "discrepancies",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "machine_id": {
+          "name": "machine_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reported_by": {
+          "name": "reported_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_checkout_id": {
+          "name": "last_checkout_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expected_location_id": {
+          "name": "expected_location_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'open'"
+        },
+        "resolved_by": {
+          "name": "resolved_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "discrepancies_org_id_status_created_at_idx": {
+          "name": "discrepancies_org_id_status_created_at_idx",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "discrepancies_org_id_orgs_id_fk": {
+          "name": "discrepancies_org_id_orgs_id_fk",
+          "tableFrom": "discrepancies",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "tableTo": "orgs",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "discrepancies_machine_id_machines_id_fk": {
+          "name": "discrepancies_machine_id_machines_id_fk",
+          "tableFrom": "discrepancies",
+          "columnsFrom": [
+            "machine_id"
+          ],
+          "tableTo": "machines",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "discrepancies_reported_by_employees_id_fk": {
+          "name": "discrepancies_reported_by_employees_id_fk",
+          "tableFrom": "discrepancies",
+          "columnsFrom": [
+            "reported_by"
+          ],
+          "tableTo": "employees",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "discrepancies_last_checkout_id_checkouts_id_fk": {
+          "name": "discrepancies_last_checkout_id_checkouts_id_fk",
+          "tableFrom": "discrepancies",
+          "columnsFrom": [
+            "last_checkout_id"
+          ],
+          "tableTo": "checkouts",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "discrepancies_expected_location_id_locations_id_fk": {
+          "name": "discrepancies_expected_location_id_locations_id_fk",
+          "tableFrom": "discrepancies",
+          "columnsFrom": [
+            "expected_location_id"
+          ],
+          "tableTo": "locations",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "discrepancies_resolved_by_employees_id_fk": {
+          "name": "discrepancies_resolved_by_employees_id_fk",
+          "tableFrom": "discrepancies",
+          "columnsFrom": [
+            "resolved_by"
+          ],
+          "tableTo": "employees",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "discrepancies_status_check": {
+          "name": "discrepancies_status_check",
+          "value": "\"discrepancies\".\"status\" in ('open', 'resolved')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.employees": {
+      "name": "employees",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "full_name": {
+          "name": "full_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fm_id": {
+          "name": "fm_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'staff'"
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "employees_org_id_active_idx": {
+          "name": "employees_org_id_active_idx",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"employees\".\"active\"",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "employees_org_id_orgs_id_fk": {
+          "name": "employees_org_id_orgs_id_fk",
+          "tableFrom": "employees",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "tableTo": "orgs",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "employees_org_id_fm_id_unique": {
+          "name": "employees_org_id_fm_id_unique",
+          "columns": [
+            "org_id",
+            "fm_id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "employees_role_check": {
+          "name": "employees_role_check",
+          "value": "\"employees\".\"role\" in ('staff', 'manager')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.incidents": {
+      "name": "incidents",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "machine_id": {
+          "name": "machine_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checkout_id": {
+          "name": "checkout_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'open'"
+        },
+        "cleared_by": {
+          "name": "cleared_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cleared_at": {
+          "name": "cleared_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "incidents_org_id_status_created_at_idx": {
+          "name": "incidents_org_id_status_created_at_idx",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "incidents_org_id_orgs_id_fk": {
+          "name": "incidents_org_id_orgs_id_fk",
+          "tableFrom": "incidents",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "tableTo": "orgs",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "incidents_machine_id_machines_id_fk": {
+          "name": "incidents_machine_id_machines_id_fk",
+          "tableFrom": "incidents",
+          "columnsFrom": [
+            "machine_id"
+          ],
+          "tableTo": "machines",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "incidents_employee_id_employees_id_fk": {
+          "name": "incidents_employee_id_employees_id_fk",
+          "tableFrom": "incidents",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "tableTo": "employees",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "incidents_checkout_id_checkouts_id_fk": {
+          "name": "incidents_checkout_id_checkouts_id_fk",
+          "tableFrom": "incidents",
+          "columnsFrom": [
+            "checkout_id"
+          ],
+          "tableTo": "checkouts",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "incidents_cleared_by_employees_id_fk": {
+          "name": "incidents_cleared_by_employees_id_fk",
+          "tableFrom": "incidents",
+          "columnsFrom": [
+            "cleared_by"
+          ],
+          "tableTo": "employees",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "incidents_status_check": {
+          "name": "incidents_status_check",
+          "value": "\"incidents\".\"status\" in ('open', 'cleared')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.locations": {
+      "name": "locations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "locations_org_id_orgs_id_fk": {
+          "name": "locations_org_id_orgs_id_fk",
+          "tableFrom": "locations",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "tableTo": "orgs",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "locations_org_id_name_unique": {
+          "name": "locations_org_id_name_unique",
+          "columns": [
+            "org_id",
+            "name"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "locations_type_check": {
+          "name": "locations_type_check",
+          "value": "\"locations\".\"type\" in ('store', 'housekeeping')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.machines": {
+      "name": "machines",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "template_id": {
+          "name": "template_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_location_id": {
+          "name": "current_location_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'available'"
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "machines_org_id_status_idx": {
+          "name": "machines_org_id_status_idx",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "machines_org_id_current_location_id_idx": {
+          "name": "machines_org_id_current_location_id_idx",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "current_location_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "machines_org_id_orgs_id_fk": {
+          "name": "machines_org_id_orgs_id_fk",
+          "tableFrom": "machines",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "tableTo": "orgs",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "machines_template_id_checklist_templates_id_fk": {
+          "name": "machines_template_id_checklist_templates_id_fk",
+          "tableFrom": "machines",
+          "columnsFrom": [
+            "template_id"
+          ],
+          "tableTo": "checklist_templates",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "machines_current_location_id_locations_id_fk": {
+          "name": "machines_current_location_id_locations_id_fk",
+          "tableFrom": "machines",
+          "columnsFrom": [
+            "current_location_id"
+          ],
+          "tableTo": "locations",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "machines_org_id_code_unique": {
+          "name": "machines_org_id_code_unique",
+          "columns": [
+            "org_id",
+            "code"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "machines_status_check": {
+          "name": "machines_status_check",
+          "value": "\"machines\".\"status\" in ('available', 'checked_out', 'faulty')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.orgs": {
+      "name": "orgs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "settings": {
+          "name": "settings",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "orgs_slug_unique": {
+          "name": "orgs_slug_unique",
+          "columns": [
+            "slug"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "views": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
