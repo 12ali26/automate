@@ -8,6 +8,13 @@
       "when": 1788682285227,
       "tag": "0000_bent_nomad",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788685107811,
+      "tag": "0001_nostalgic_thing",
+      "breakpoints": true
     }
   ]
 }
