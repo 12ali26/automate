@@ -7,12 +7,16 @@ import * as schema from '../db/schema'
 
 type Db = PostgresJsDatabase<typeof schema>
 
-// Reuse a single connection across hot reloads in development so we do not
-// exhaust Postgres connection slots.
+// Reuse one connection pool: memoised on the module (covers production, where
+// the module is evaluated once) and mirrored onto globalThis so dev hot reloads
+// reuse it too. Getting this wrong leaks a new pool per request and exhausts
+// Postgres connection slots under load.
 const globalForDb = globalThis as unknown as {
   __sqlClient?: ReturnType<typeof postgres>
   __db?: Db
 }
+
+let dbInstance: Db | undefined
 
 function createDb(): Db {
   const connectionString = process.env.DATABASE_URL
@@ -23,22 +27,17 @@ function createDb(): Db {
     )
   }
 
-  const client =
-    globalForDb.__sqlClient ?? postgres(connectionString, { prepare: false })
-
-  if (process.env.NODE_ENV !== 'production') {
-    globalForDb.__sqlClient = client
-  }
+  const client = globalForDb.__sqlClient ?? postgres(connectionString, { prepare: false })
+  globalForDb.__sqlClient = client
 
   return drizzle(client, { schema })
 }
 
 function getDb(): Db {
-  const existing = globalForDb.__db ?? createDb()
-  if (process.env.NODE_ENV !== 'production') {
-    globalForDb.__db = existing
-  }
-  return existing
+  if (dbInstance) return dbInstance
+  dbInstance = globalForDb.__db ?? createDb()
+  globalForDb.__db = dbInstance
+  return dbInstance
 }
 
 // The single Drizzle client instance. Connecting is deferred to first use so
