@@ -19,6 +19,19 @@ export function canCheckIn(
 }
 
 /**
+ * Whether any blocking checklist item was answered "fail". A blocking failure
+ * stops a checkout; a non-blocking failure is only recorded. `responses` need
+ * not cover every item — an unanswered item is not a failure here.
+ */
+export function hasBlockingFailure(
+  items: { id: string; blocking: boolean }[],
+  responses: { itemId: string; passed: boolean }[],
+): boolean {
+  const failed = new Set(responses.filter((r) => !r.passed).map((r) => r.itemId))
+  return items.some((item) => item.blocking && failed.has(item.id))
+}
+
+/**
  * Whether moving a machine from `from` to `to` is allowed for the given role.
  *
  * - staff: available <-> checked_out, and either of those -> faulty (reporting

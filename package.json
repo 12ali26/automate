@@ -11,7 +11,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx db/seed.ts",
     "lint": "eslint .",
-    "consistency-check": "tsx scripts/consistency-check.ts"
+    "consistency-check": "tsx scripts/consistency-check.ts",
+    "verify-4": "tsx scripts/verify-4.ts"
   },
   "license": "UNLICENSED",
   "packageManager": "pnpm@10.32.1",

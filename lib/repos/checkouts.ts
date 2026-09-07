@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm'
 import type { Transaction } from '@/lib/auth/org-context'
 import type { Checkout } from '@/lib/domain/types'
 
-import { iso, toRows } from './_helpers'
+import { isUniqueViolation, iso, orgIdParam, toRows } from './_helpers'
 
 type Row = {
   id: string
@@ -37,6 +37,76 @@ export async function findOpenForMachine(
     await tx.execute(sql`${select} where machine_id = ${machineId} and closed_at is null limit 1`),
   )
   return rows[0] ? map(rows[0]) : null
+}
+
+/**
+ * Like {@link findOpenForMachine} but takes a FOR UPDATE row lock on the open
+ * checkout. Use at check-in so a concurrent check-in of the same machine
+ * blocks here instead of both closing the row.
+ */
+export async function findOpenForMachineForUpdate(
+  tx: Transaction,
+  machineId: string,
+): Promise<Checkout | null> {
+  const rows = toRows<Row>(
+    await tx.execute(
+      sql`${select} where machine_id = ${machineId} and closed_at is null limit 1 for update`,
+    ),
+  )
+  return rows[0] ? map(rows[0]) : null
+}
+
+/**
+ * Returned by {@link insertOpenCheckout} when the one_open_checkout_per_machine
+ * partial unique index rejected the insert — i.e. someone else's checkout for
+ * this machine is already open. This is an expected race outcome, not a fault:
+ * the caller turns it into a friendly "someone just took this machine" result.
+ */
+export const CHECKOUT_CONFLICT = Symbol('CHECKOUT_CONFLICT')
+
+/**
+ * Open a checkout for a machine. `org_id` comes from the transaction context,
+ * never the caller. A 23505 on the partial unique index is caught here and
+ * signalled as {@link CHECKOUT_CONFLICT}; every other error propagates. After a
+ * conflict the transaction is aborted — the caller must roll back, not carry
+ * on.
+ */
+export async function insertOpenCheckout(
+  tx: Transaction,
+  input: { machineId: string; employeeId: string },
+): Promise<Checkout | typeof CHECKOUT_CONFLICT> {
+  try {
+    const rows = toRows<Row>(
+      await tx.execute(sql`
+        insert into checkouts (org_id, machine_id, employee_id)
+        values (${orgIdParam}, ${input.machineId}, ${input.employeeId})
+        returning id, machine_id, employee_id, opened_at, closed_at, return_location_id
+      `),
+    )
+    const r = rows[0]
+    if (!r) throw new Error('insertOpenCheckout: insert returned no row')
+    return map(r)
+  } catch (e) {
+    if (isUniqueViolation(e, 'one_open_checkout_per_machine')) return CHECKOUT_CONFLICT
+    throw e
+  }
+}
+
+/**
+ * Close an open checkout: stamp closed_at and record where the machine was
+ * returned. Fires the checkout_status_sync trigger, which flips the machine
+ * back to 'available'. The `closed_at is null` guard makes a double close a
+ * no-op.
+ */
+export async function closeCheckout(
+  tx: Transaction,
+  input: { checkoutId: string; returnLocationId: string },
+): Promise<void> {
+  await tx.execute(sql`
+    update checkouts
+    set closed_at = now(), return_location_id = ${input.returnLocationId}
+    where id = ${input.checkoutId} and closed_at is null
+  `)
 }
 
 /** All currently-open checkouts held by an employee, newest first. */

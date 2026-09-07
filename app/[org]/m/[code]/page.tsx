@@ -23,12 +23,21 @@ const clock = (isoString: string) =>
     minute: '2-digit',
   }).format(new Date(isoString))
 
+const DONE_MESSAGE: Record<string, string> = {
+  checkout: 'Checked out. It’s yours now.',
+  checkin: 'Checked in. Thanks.',
+}
+
 export default async function MachinePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ org: string; code: string }>
+  searchParams: Promise<{ done?: string | string[] }>
 }) {
   const { org: slug, code } = await params
+  const { done } = await searchParams
+  const doneMessage = typeof done === 'string' ? DONE_MESSAGE[done] : undefined
   const { session, org } = await requireStaffSession(slug)
 
   const data = await withOrgContext(org.id, async (tx) => {
@@ -92,8 +101,16 @@ export default async function MachinePage({
   return (
     <main className="flex flex-1 flex-col gap-4 p-5">
       <MachineHeader name={machine.name} code={machine.code} />
+      {doneMessage ? (
+        <p
+          role="status"
+          className="rounded-xl border-2 border-green-600 bg-green-50 px-4 py-3 text-base font-bold text-green-950"
+        >
+          {doneMessage}
+        </p>
+      ) : null}
       <MachineStatus view={statusView} />
-      <MachineStateView view={view} />
+      <MachineStateView view={view} basePath={`/${slug}/m/${code}`} />
     </main>
   )
 }

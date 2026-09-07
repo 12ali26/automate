@@ -5,6 +5,90 @@ import type { FleetMachine, MachineDetail, MachineStatus } from '@/lib/domain/ty
 
 import { iso, toRows } from './_helpers'
 
+/**
+ * A machine row locked FOR UPDATE by its per-org code. This is the row lock
+ * that serialises concurrent checkouts of the same machine: while one
+ * transaction holds it, another blocks here until the first commits or rolls
+ * back. No joins — locking a single table keeps the lock semantics simple.
+ */
+export type LockedMachine = {
+  id: string
+  code: string
+  name: string
+  status: MachineStatus
+  active: boolean
+  templateId: string | null
+}
+
+export async function lockByCode(
+  tx: Transaction,
+  code: string,
+): Promise<LockedMachine | null> {
+  const rows = toRows<{
+    id: string
+    code: string
+    name: string
+    status: MachineStatus
+    active: boolean
+    template_id: string | null
+  }>(
+    await tx.execute(sql`
+      select id, code, name, status, active, template_id
+      from machines
+      where code = ${code}
+      limit 1
+      for update
+    `),
+  )
+  const r = rows[0]
+  if (!r) return null
+  return {
+    id: r.id,
+    code: r.code,
+    name: r.name,
+    status: r.status,
+    active: r.active,
+    templateId: r.template_id,
+  }
+}
+
+/** Set a machine's last-known location. Does not touch status. */
+export async function setCurrentLocation(
+  tx: Transaction,
+  input: { machineId: string; locationId: string },
+): Promise<void> {
+  await tx.execute(sql`
+    update machines set current_location_id = ${input.locationId}
+    where id = ${input.machineId}
+  `)
+}
+
+/**
+ * Force a machine's status. The checkout_status_sync trigger keeps
+ * available/checked_out in step with checkouts on its own — call this ONLY for
+ * the one case the trigger cannot know about: a fault reported at check-in,
+ * which must override the 'available' the trigger just set.
+ */
+export async function setStatus(
+  tx: Transaction,
+  input: { machineId: string; status: MachineStatus },
+): Promise<void> {
+  await tx.execute(sql`
+    update machines set status = ${input.status} where id = ${input.machineId}
+  `)
+}
+
+/** The machine's current status, or null if it no longer exists. */
+export async function getStatus(
+  tx: Transaction,
+  machineId: string,
+): Promise<MachineStatus | null> {
+  const rows = toRows<{ status: MachineStatus }>(
+    await tx.execute(sql`select status from machines where id = ${machineId} limit 1`),
+  )
+  return rows[0]?.status ?? null
+}
+
 type DetailRow = {
   id: string
   code: string

@@ -14,14 +14,21 @@ export type MachineView =
   | { state: 'out_by_other'; holderName: string; duration: string; sinceLabel: string }
   | { state: 'faulty'; description: string | null; reportedLabel: string | null }
 
-export function MachineStateView({ view }: { view: MachineView }) {
+export function MachineStateView({
+  view,
+  basePath,
+}: {
+  view: MachineView
+  /** `/{org}/m/{code}` — the checkout / check-in routes hang off this. */
+  basePath: string
+}) {
   const body = renderBody(view)
   return (
     <div className="flex flex-1 flex-col gap-6">
       {body ? <div className="flex flex-col gap-4">{body}</div> : null}
       {/* push the primary action into the thumb zone */}
       <div className="flex-1" />
-      <div className="flex flex-col gap-3 pb-1">{renderActions(view)}</div>
+      <div className="flex flex-col gap-3 pb-1">{renderActions(view, basePath)}</div>
     </div>
   )
 }
@@ -58,19 +65,23 @@ function renderBody(view: MachineView): ReactNode {
   }
 }
 
-function renderActions(view: MachineView): ReactNode {
+function renderActions(view: MachineView, basePath: string): ReactNode {
   switch (view.state) {
     case 'available':
       return (
         <>
-          <ActionButton variant="primary">Check out</ActionButton>
+          <ActionButton variant="primary" href={`${basePath}/checkout`}>
+            Check out
+          </ActionButton>
           <ActionButton variant="secondary">Report a fault</ActionButton>
         </>
       )
     case 'out_by_me':
       return (
         <>
-          <ActionButton variant="primary">Check in</ActionButton>
+          <ActionButton variant="primary" href={`${basePath}/checkin`}>
+            Check in
+          </ActionButton>
           <ActionButton variant="secondary">Report a fault</ActionButton>
         </>
       )
