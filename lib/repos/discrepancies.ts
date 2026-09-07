@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 
 import type { Transaction } from '@/lib/auth/org-context'
-import type { Discrepancy, DiscrepancyStatus } from '@/lib/domain/types'
+import type { Discrepancy, DiscrepancyStatus, OpenDiscrepancyDetail } from '@/lib/domain/types'
 
 import { log as logActivity } from './activity'
 import { findById as findEmployeeById } from './employees'
@@ -46,6 +46,51 @@ export async function findOpenForMachine(
     `),
   )
   return rows[0] ? map(rows[0]) : null
+}
+
+/**
+ * Every open discrepancy with machine, reporter, expected location, and the
+ * last person known to have had it, newest first. Feeds the manager
+ * dashboard's "reported missing" section. Worded as a fact about the machine —
+ * the last holder is context, not an accusation.
+ */
+export async function listOpenWithDetail(
+  tx: Transaction,
+): Promise<OpenDiscrepancyDetail[]> {
+  const rows = toRows<{
+    id: string
+    created_at: string | Date
+    m_code: string
+    m_name: string
+    reporter_name: string
+    loc_name: string | null
+    last_holder_name: string | null
+  }>(
+    await tx.execute(sql`
+      select
+        d.id, d.created_at,
+        m.code as m_code, m.name as m_name,
+        rep.full_name as reporter_name,
+        loc.name as loc_name,
+        lh.full_name as last_holder_name
+      from discrepancies d
+      join machines m on m.id = d.machine_id
+      join employees rep on rep.id = d.reported_by
+      left join locations loc on loc.id = d.expected_location_id
+      left join checkouts lc on lc.id = d.last_checkout_id
+      left join employees lh on lh.id = lc.employee_id
+      where d.status = 'open'
+      order by d.created_at desc
+    `),
+  )
+  return rows.map((r) => ({
+    id: r.id,
+    createdAt: iso(r.created_at),
+    machine: { code: r.m_code, name: r.m_name },
+    reporter: { fullName: r.reporter_name },
+    expectedLocation: r.loc_name ? { name: r.loc_name } : null,
+    lastHolder: r.last_holder_name ? { fullName: r.last_holder_name } : null,
+  }))
 }
 
 /**

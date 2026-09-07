@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 
+import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 
 import { IdentityBar } from '@/components/IdentityBar'
@@ -40,6 +41,12 @@ export default async function OrgLayout({
 
   const org = await findBySlug(slug)
   if (!org) notFound()
+
+  // The manager area is desktop-first — no mobile shell, no staff identity bar.
+  const pathname = (await headers()).get('x-pathname') ?? ''
+  if (pathname === `/${slug}/manage` || pathname.startsWith(`/${slug}/manage/`)) {
+    return <div className="min-h-screen bg-gray-50 text-gray-900">{children}</div>
+  }
 
   const session = await getStaffSession(org.id)
 

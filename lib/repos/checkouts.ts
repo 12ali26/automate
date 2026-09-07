@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 
 import type { Transaction } from '@/lib/auth/org-context'
-import type { Checkout } from '@/lib/domain/types'
+import type { Checkout, OpenCheckoutDetail } from '@/lib/domain/types'
 
 import { isUniqueViolation, iso, orgIdParam, toRows } from './_helpers'
 
@@ -127,6 +127,43 @@ export async function findLastClosedForMachine(
     `),
   )
   return rows[0] ? map(rows[0]) : null
+}
+
+/**
+ * Every open checkout with its machine and holder, oldest first (longest out).
+ * Feeds the manager dashboard's "overdue" and "currently out" sections.
+ */
+export async function listOpenWithDetail(
+  tx: Transaction,
+): Promise<OpenCheckoutDetail[]> {
+  const rows = toRows<{
+    checkout_id: string
+    opened_at: string | Date
+    m_id: string
+    m_code: string
+    m_name: string
+    e_id: string
+    e_full_name: string
+    e_fm_id: string
+  }>(
+    await tx.execute(sql`
+      select
+        c.id as checkout_id, c.opened_at,
+        m.id as m_id, m.code as m_code, m.name as m_name,
+        e.id as e_id, e.full_name as e_full_name, e.fm_id as e_fm_id
+      from checkouts c
+      join machines m on m.id = c.machine_id
+      join employees e on e.id = c.employee_id
+      where c.closed_at is null
+      order by c.opened_at asc
+    `),
+  )
+  return rows.map((r) => ({
+    checkoutId: r.checkout_id,
+    openedAt: iso(r.opened_at),
+    machine: { id: r.m_id, code: r.m_code, name: r.m_name },
+    holder: { id: r.e_id, fullName: r.e_full_name, fmId: r.e_fm_id },
+  }))
 }
 
 /** All currently-open checkouts held by an employee, newest first. */

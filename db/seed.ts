@@ -4,10 +4,12 @@ import { and, eq, isNull, sql } from 'drizzle-orm'
 
 import { generateMachineSlug } from '../lib/domain/machine-code'
 import { db } from '../lib/db'
+import { provisionManagerAuthUser } from './manager-auth'
 import {
   checklistItems,
   checklistTemplates,
   checkouts,
+  discrepancies,
   employees,
   incidents,
   locations,
@@ -18,6 +20,11 @@ import {
 // Load env the same way Next.js does: .env, then .env.local (gitignored) wins.
 loadEnvConfig(process.cwd())
 
+// The demo manager's real credentials (Supabase Auth). Printed at the end of
+// the seed for manual sign-in at /demo/manage.
+const DEMO_MANAGER_EMAIL = 'manager@demo.automate'
+const DEMO_MANAGER_PASSWORD = 'Demo-Manager-2026'
+
 async function seed() {
   // --- org -----------------------------------------------------------------
   await db
@@ -27,6 +34,17 @@ async function seed() {
 
   const [org] = await db.select().from(orgs).where(eq(orgs.slug, 'demo'))
   if (!org) throw new Error('demo org missing after insert')
+
+  // Shift config for the manager dashboard's overdue tracking. jsonb `||` is a
+  // shallow merge (right wins), so any other settings keys are preserved.
+  await db.execute(sql`
+    update orgs set settings = settings || ${JSON.stringify({
+      shift_boundaries: ['06:00', '14:00', '22:00'],
+      grace_minutes: 30,
+      timezone: 'Asia/Qatar',
+    })}::jsonb
+    where id = ${org.id}
+  `)
 
   // --- locations ---------------------------------------------------------
   // Idempotent via the (org_id, name) unique constraint.
@@ -167,6 +185,18 @@ async function seed() {
       set: { fullName: sql`excluded.full_name`, role: sql`excluded.role` },
     })
 
+  // --- manager auth --------------------------------------------------
+  // Robert Adeyemi (FM 1010) is the manager. Give him real credentials via
+  // Supabase Auth and link the auth user to his employee row.
+  const managerAuthUserId = await provisionManagerAuthUser({
+    email: DEMO_MANAGER_EMAIL,
+    password: DEMO_MANAGER_PASSWORD,
+  })
+  await db.execute(sql`
+    update employees set auth_user_id = ${managerAuthUserId}
+    where org_id = ${org.id} and fm_id = '1010'
+  `)
+
   // --- machine states ------------------------------------------------
   // Re-read machines and employees now that they exist.
   const machineRows = await db.select().from(machines).where(eq(machines.orgId, org.id))
@@ -198,20 +228,24 @@ async function seed() {
   }
 
   // Open checkouts. The sync_machine_status trigger flips machines.status to
-  // 'checked_out' on insert. Backdated so the fleet view shows real durations.
+  // 'checked_out' on insert. opened_at is (re)set to a fixed offset from now on
+  // every seed run so the fleet view and manager dashboard always show
+  // realistic durations — and a deliberate mix of overdue / not, given the
+  // 06:00/14:00/22:00 + 30m shift config above.
   const checkoutPlan: Array<{ code: string; fmId: string; minutesAgo: number }> = [
-    { code: 'VAC-003', fmId: '1001', minutesAgo: 135 }, // "2h 15m"
-    { code: 'VAC-004', fmId: '1002', minutesAgo: 4400 }, // "3d 1h"
-    { code: 'VAC-010', fmId: '1003', minutesAgo: 40 }, // "40m"
-    { code: 'VAC-011', fmId: '1004', minutesAgo: 310 }, // "5h 10m"
-    { code: 'VAC-012', fmId: '1005', minutesAgo: 90 }, // "1h 30m"
-    { code: 'VAC-013', fmId: '1006', minutesAgo: 1500 }, // "1d 1h"
-    { code: 'VAC-014', fmId: '1007', minutesAgo: 22 }, // "22m"
+    { code: 'VAC-003', fmId: '1001', minutesAgo: 45 }, //    ~45m — recent
+    { code: 'VAC-004', fmId: '1002', minutesAgo: 4400 }, //  ~3d — long overdue
+    { code: 'VAC-010', fmId: '1003', minutesAgo: 20 }, //    ~20m — recent
+    { code: 'VAC-011', fmId: '1004', minutesAgo: 1000 }, //  ~16h — overdue
+    { code: 'VAC-012', fmId: '1005', minutesAgo: 90 }, //    ~1h 30m
+    { code: 'VAC-013', fmId: '1006', minutesAgo: 1500 }, //  ~1d — overdue
+    { code: 'VAC-014', fmId: '1007', minutesAgo: 15 }, //    ~15m — recent
   ]
   for (const plan of checkoutPlan) {
     const machine = machineByCode(plan.code)
     const employee = employeeByFm(plan.fmId)
     if (!machine || !employee) continue
+    const openedAt = new Date(Date.now() - plan.minutesAgo * 60_000)
     const open = await db
       .select()
       .from(checkouts)
@@ -221,8 +255,10 @@ async function seed() {
         orgId: org.id,
         machineId: machine.id,
         employeeId: employee.id,
-        openedAt: new Date(Date.now() - plan.minutesAgo * 60_000),
+        openedAt,
       })
+    } else {
+      await db.update(checkouts).set({ openedAt }).where(eq(checkouts.id, open[0].id))
     }
   }
 
@@ -248,6 +284,27 @@ async function seed() {
         description: plan.description,
         status: 'open',
       })
+    }
+  }
+
+  // One open discrepancy: VAC-007 (available at the store) reported not there.
+  {
+    const vac007 = machineByCode('VAC-007')
+    const reporter = employeeByFm('1003')
+    if (vac007 && reporter) {
+      const openDisc = await db
+        .select()
+        .from(discrepancies)
+        .where(and(eq(discrepancies.machineId, vac007.id), eq(discrepancies.status, 'open')))
+      if (openDisc.length === 0) {
+        await db.insert(discrepancies).values({
+          orgId: org.id,
+          machineId: vac007.id,
+          reportedBy: reporter.id,
+          expectedLocationId: vac007.currentLocationId,
+          status: 'open',
+        })
+      }
     }
   }
 
@@ -284,6 +341,11 @@ async function seed() {
   for (const m of [...machs].sort((a, b) => a.code.localeCompare(b.code))) {
     console.log(`    ${m.code.padEnd(8)} -> ${m.slug}`)
   }
+
+  console.log('  manager sign-in (/demo/manage):')
+  console.log(`    email:    ${DEMO_MANAGER_EMAIL}`)
+  console.log(`    password: ${DEMO_MANAGER_PASSWORD}`)
+  console.log('  shift boundaries: 06:00 / 14:00 / 22:00  ·  grace 30m  ·  Asia/Qatar')
 }
 
 seed()

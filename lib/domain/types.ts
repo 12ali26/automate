@@ -59,6 +59,8 @@ export interface Employee {
   fmId: string
   role: EmployeeRole
   active: boolean
+  /** The Supabase Auth user linked to this employee — managers only, else null. */
+  authUserId: string | null
 }
 
 export interface Checkout {
@@ -102,6 +104,32 @@ export interface FleetHolder {
   fullName: string
   fmId: string
   since: string
+}
+
+// --- manager dashboard row shapes ------------------------------------------
+
+export interface OpenCheckoutDetail {
+  checkoutId: string
+  openedAt: string
+  machine: { id: string; code: string; name: string }
+  holder: { id: string; fullName: string; fmId: string }
+}
+
+export interface OpenIncidentDetail {
+  id: string
+  description: string
+  createdAt: string
+  machine: { code: string; name: string }
+  reporter: { fullName: string; fmId: string }
+}
+
+export interface OpenDiscrepancyDetail {
+  id: string
+  createdAt: string
+  machine: { code: string; name: string }
+  reporter: { fullName: string }
+  expectedLocation: { name: string } | null
+  lastHolder: { fullName: string } | null
 }
 
 /** One row of the manager fleet view. */

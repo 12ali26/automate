@@ -139,6 +139,23 @@ export async function getStatus(
   return rows[0]?.status ?? null
 }
 
+/** Active machine counts by status, for the manager dashboard's top row. */
+export async function countByStatus(
+  tx: Transaction,
+): Promise<Record<MachineStatus, number>> {
+  const rows = toRows<{ status: MachineStatus; n: number }>(
+    await tx.execute(sql`
+      select status, count(*)::int as n
+      from machines
+      where active = true
+      group by status
+    `),
+  )
+  const counts: Record<MachineStatus, number> = { available: 0, checked_out: 0, faulty: 0 }
+  for (const r of rows) counts[r.status] = r.n
+  return counts
+}
+
 type DetailRow = {
   id: string
   slug: string

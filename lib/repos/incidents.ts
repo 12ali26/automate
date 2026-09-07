@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 
 import type { Transaction } from '@/lib/auth/org-context'
-import type { Incident, IncidentStatus } from '@/lib/domain/types'
+import type { Incident, IncidentStatus, OpenIncidentDetail } from '@/lib/domain/types'
 
 import { log as logActivity } from './activity'
 import { findById as findEmployeeById } from './employees'
@@ -139,4 +139,41 @@ export async function findOpenForMachine(
     status: r.status,
     createdAt: iso(r.created_at),
   }
+}
+
+/**
+ * Every open incident with its machine and the employee who reported it,
+ * newest first. Feeds the manager dashboard's "open faults" section.
+ */
+export async function listOpenWithDetail(
+  tx: Transaction,
+): Promise<OpenIncidentDetail[]> {
+  const rows = toRows<{
+    id: string
+    description: string
+    created_at: string | Date
+    m_code: string
+    m_name: string
+    e_full_name: string
+    e_fm_id: string
+  }>(
+    await tx.execute(sql`
+      select
+        i.id, i.description, i.created_at,
+        m.code as m_code, m.name as m_name,
+        e.full_name as e_full_name, e.fm_id as e_fm_id
+      from incidents i
+      join machines m on m.id = i.machine_id
+      join employees e on e.id = i.employee_id
+      where i.status = 'open'
+      order by i.created_at desc
+    `),
+  )
+  return rows.map((r) => ({
+    id: r.id,
+    description: r.description,
+    createdAt: iso(r.created_at),
+    machine: { code: r.m_code, name: r.m_name },
+    reporter: { fullName: r.e_full_name, fmId: r.e_fm_id },
+  }))
 }

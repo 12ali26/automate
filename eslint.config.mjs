@@ -35,7 +35,7 @@ export default [
     },
   },
   {
-    files: ['lib/repos/**', 'lib/auth/**', 'scripts/**', 'db/seed.ts'],
+    files: ['lib/repos/**', 'lib/auth/**', 'scripts/**', 'db/seed.ts', 'db/manager-auth.ts'],
     rules: {
       'no-restricted-imports': 'off',
     },

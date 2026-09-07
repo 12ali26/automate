@@ -78,11 +78,16 @@ export const employees = pgTable(
     fmId: text('fm_id').notNull(),
     role: text('role').notNull().default('staff'),
     active: boolean('active').notNull().default(true),
+    // Set ONLY for managers: the Supabase Auth user that authenticates them.
+    // Staff have none — FM ID is identification, not authentication.
+    authUserId: uuid('auth_user_id'),
     createdAt: createdAt(),
   },
   (t) => [
     // FM IDs are unique per org, not globally.
     unique('employees_org_id_fm_id_unique').on(t.orgId, t.fmId),
+    // One employee per auth user, globally. NULLs are exempt (staff).
+    unique('employees_auth_user_id_unique').on(t.authUserId),
     check('employees_role_check', sql`${t.role} in ('staff', 'manager')`),
     index('employees_org_id_active_idx').on(t.orgId).where(sql`${t.active}`),
   ],
