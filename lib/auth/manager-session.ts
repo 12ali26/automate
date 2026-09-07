@@ -83,6 +83,27 @@ export async function clearManagerSession(): Promise<void> {
   ;(await cookies()).delete(MANAGER_COOKIE)
 }
 
+export interface ManagerActor {
+  orgId: string
+  orgSlug: string
+  employeeId: string
+}
+
+/**
+ * The server-action counterpart to {@link requireManagerSession}: resolves the
+ * org slug (404 on unknown), then the manager session (redirect to the login
+ * page when absent), and returns the acting org id + employee id. Every manager
+ * mutation calls this first; the repo layer re-checks the employee's role as a
+ * second gate.
+ */
+export async function requireManagerForAction(orgSlug: string): Promise<ManagerActor> {
+  const org = await findBySlug(orgSlug)
+  if (!org) notFound()
+  const session = await getManagerSession(org.id)
+  if (!session) redirect(`/${orgSlug}/manage`)
+  return { orgId: org.id, orgSlug, employeeId: session.employeeId }
+}
+
 export interface RequiredManagerSession {
   session: ManagerSession
   org: OrgRecord

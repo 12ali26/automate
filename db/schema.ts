@@ -120,6 +120,11 @@ export const checklistItems = pgTable(
     label: text('label').notNull(),
     sortOrder: integer('sort_order').notNull().default(0),
     blocking: boolean('blocking').notNull().default(false),
+    // Soft-delete flag. An item with checklist_responses can never be hard
+    // deleted — historical answers must keep resolving to a label — so removing
+    // it from a template sets active = false instead: gone from new checklists,
+    // still readable in old records. Items with no responses are hard deleted.
+    active: boolean('active').notNull().default(true),
   },
   (t) => [
     index('checklist_items_template_id_sort_order_idx').on(t.templateId, t.sortOrder),

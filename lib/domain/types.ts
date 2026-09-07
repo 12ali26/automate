@@ -132,6 +132,99 @@ export interface OpenDiscrepancyDetail {
   lastHolder: { fullName: string } | null
 }
 
+// --- manager admin (Stage 7B) row shapes ---------------------------------
+
+/** One row of the manager machines list. */
+export interface ManageMachineRow {
+  id: string
+  code: string
+  name: string
+  status: MachineStatus
+  active: boolean
+  currentLocation: { name: string; active: boolean } | null
+  template: { name: string; active: boolean } | null
+}
+
+/** A machine looked up for the manager detail / edit screen. */
+export interface ManageMachineDetail {
+  id: string
+  slug: string
+  code: string
+  name: string
+  status: MachineStatus
+  active: boolean
+  templateId: string | null
+  currentLocationId: string | null
+  /** True when an open checkout exists — a machine that cannot be deactivated. */
+  checkedOut: boolean
+}
+
+/**
+ * One entry in a machine's activity timeline. A closed-over union of the three
+ * things that happen to a machine — a checkout episode, a fault, a missing
+ * report — flattened and sorted most-recent-first for the detail screen.
+ */
+export type MachineHistoryEntry =
+  | {
+      kind: 'checkout'
+      at: string
+      closedAt: string | null
+      employee: { fullName: string; fmId: string }
+      returnLocation: { name: string } | null
+    }
+  | {
+      kind: 'incident'
+      at: string
+      status: IncidentStatus
+      description: string
+      reporter: { fullName: string; fmId: string }
+    }
+  | {
+      kind: 'discrepancy'
+      at: string
+      status: DiscrepancyStatus
+      reporter: { fullName: string; fmId: string }
+      expectedLocation: { name: string } | null
+    }
+
+/** One row of the manager locations screen. */
+export interface ManageLocationRow {
+  id: string
+  name: string
+  type: LocationType
+  active: boolean
+  /** Machines whose current location is this one — blocks a hard delete. */
+  machineCount: number
+}
+
+/** One row of the manager templates list. */
+export interface ManageTemplateRow {
+  id: string
+  name: string
+  active: boolean
+  itemCount: number
+  /** Machines this template is attached to. */
+  machineCount: number
+}
+
+/** A template with its live (active) items, for the editor. */
+export interface TemplateWithItems {
+  id: string
+  name: string
+  active: boolean
+  items: ChecklistItem[]
+}
+
+/** One machine reduced to what a printed QR label needs. */
+export interface PrintLabel {
+  id: string
+  code: string
+  name: string
+  slug: string
+  locationId: string | null
+  locationName: string | null
+}
+
 /** One row of the manager fleet view. */
 export interface FleetMachine {
   id: string

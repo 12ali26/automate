@@ -1,3 +1,4 @@
+import { ManageChrome, PageHead } from '@/components/manage/ManageChrome'
 import { managerSignOutAction } from '@/lib/auth/manager-actions'
 import { requireManagerSession } from '@/lib/auth/manager-session'
 import { withOrgContext } from '@/lib/auth/org-context'
@@ -56,26 +57,15 @@ export default async function ManagerDashboardPage({
   const currentlyOut = outRows
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-6 md:px-8">
-      <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-gray-200 pb-4">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-            {org.name}
-          </p>
-          <h1 className="text-2xl font-bold text-gray-950">Manager dashboard</h1>
-        </div>
-        <form action={managerSignOutAction.bind(null, slug)} className="flex items-center gap-3">
-          <span className="text-sm text-gray-600">{session.fullName}</span>
-          <button
-            type="submit"
-            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-100"
-          >
-            Sign out
-          </button>
-        </form>
-      </header>
+    <ManageChrome
+      orgSlug={slug}
+      orgName={org.name}
+      managerName={session.fullName}
+      signOutAction={managerSignOutAction.bind(null, slug)}
+    >
+      <PageHead title="Dashboard" />
 
-      <section className="mt-6 flex flex-wrap gap-3 sm:gap-4">
+      <section className="flex flex-wrap gap-3 sm:gap-4">
         <StatCard label="Available" value={data.counts.available} tone="green" />
         <StatCard label="Checked out" value={data.counts.checked_out} tone="blue" />
         <StatCard label="Faulty" value={data.counts.faulty} tone="red" />
@@ -201,7 +191,7 @@ export default async function ManagerDashboardPage({
           />
         ) : null}
       </DashSection>
-    </main>
+    </ManageChrome>
   )
 }
 
