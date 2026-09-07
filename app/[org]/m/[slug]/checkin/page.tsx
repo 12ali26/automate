@@ -17,13 +17,13 @@ export const revalidate = 0
 export default async function CheckinPage({
   params,
 }: {
-  params: Promise<{ org: string; code: string }>
+  params: Promise<{ org: string; slug: string }>
 }) {
-  const { org: slug, code } = await params
-  const { session, org } = await requireStaffSession(slug)
+  const { org: orgSlug, slug: machineSlug } = await params
+  const { session, org } = await requireStaffSession(orgSlug)
 
   const data = await withOrgContext(org.id, async (tx) => {
-    const machine = await machinesRepo.findByCode(tx, code)
+    const machine = await machinesRepo.findBySlug(tx, machineSlug)
     if (!machine || !machine.active) return null
 
     const checkout = await checkoutsRepo.findOpenForMachine(tx, machine.id)
@@ -36,7 +36,7 @@ export default async function CheckinPage({
   if (!data) notFound()
   const { machine, mine, locations } = data
 
-  const backHref = `/${slug}/m/${code}`
+  const backHref = `/${orgSlug}/m/${machineSlug}`
 
   // Someone else's checkout (or none open) is not yours to close.
   if (!mine) {
@@ -72,8 +72,8 @@ export default async function CheckinPage({
         Check in
       </p>
       <CheckinForm
-        orgSlug={slug}
-        code={code}
+        orgSlug={orgSlug}
+        slug={machineSlug}
         locations={locations}
         defaultLocationId={defaultLocationId}
         backHref={backHref}

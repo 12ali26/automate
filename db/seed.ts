@@ -2,6 +2,7 @@ import { loadEnvConfig } from '@next/env'
 
 import { and, eq, isNull, sql } from 'drizzle-orm'
 
+import { generateMachineSlug } from '../lib/domain/machine-code'
 import { db } from '../lib/db'
 import {
   checklistItems,
@@ -119,6 +120,8 @@ async function seed() {
     .values(
       Array.from({ length: 15 }, (_, i) => ({
         orgId: org.id,
+        // Random URL identifier. `code` stays readable for saying out loud.
+        slug: generateMachineSlug(),
         code: `VAC-${String(i + 1).padStart(3, '0')}`,
         name: `Vacuum ${i + 1}`,
         templateId,
@@ -274,6 +277,13 @@ async function seed() {
   console.log(`    checked out:  ${countStatus('checked_out')}`)
   console.log(`    faulty:       ${countStatus('faulty')}`)
   console.log('    Housekeeping 9: all machines checked out (zero available)')
+
+  // Slugs are the only way to reach a machine's page — print them for manual
+  // testing (/{org}/m/{slug}).
+  console.log('  machine slugs (code -> /demo/m/<slug>):')
+  for (const m of [...machs].sort((a, b) => a.code.localeCompare(b.code))) {
+    console.log(`    ${m.code.padEnd(8)} -> ${m.slug}`)
+  }
 }
 
 seed()

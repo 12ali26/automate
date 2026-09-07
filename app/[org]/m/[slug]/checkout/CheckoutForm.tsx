@@ -19,12 +19,12 @@ const FAILURE_MESSAGE: Record<CheckOutFailure, string> = {
 
 export function CheckoutForm({
   orgSlug,
-  code,
+  slug,
   items,
   backHref,
 }: {
   orgSlug: string
-  code: string
+  slug: string
   items: ChecklistItem[]
   backHref: string
 }) {
@@ -51,7 +51,7 @@ export function CheckoutForm({
       })),
     }
     startTransition(async () => {
-      const result = await checkOutAction(orgSlug, code, payload)
+      const result = await checkOutAction(orgSlug, slug, payload)
       // A successful checkout redirects server-side; only failures return here.
       if (result && !result.ok) setFailure(result.reason)
     })

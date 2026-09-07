@@ -18,5 +18,5 @@ export default async function FleetPage({
 
   const machines = await withOrgContext(org.id, (tx) => machinesRepo.listForFleet(tx))
 
-  return <FleetView orgSlug={slug} machines={machines} />
+  return <FleetView machines={machines} />
 }

@@ -1,33 +1,26 @@
-import Link from 'next/link'
-
 import { formatDuration } from '@/lib/domain/duration'
 import type { FleetMachine } from '@/lib/domain/types'
 
 /**
- * One compact machine card in the fleet view. Tapping it opens the machine
- * page, where the machine can be claimed.
+ * One compact machine card in the fleet view.
+ *
+ * The fleet view is information only — "what's available and where" so nobody
+ * walks to the basement for nothing. It is deliberately NOT a launch point for
+ * actions: operators reach check out / check in / report fault only by scanning
+ * a machine's QR sticker. So these cards are plain, non-interactive elements —
+ * no link, no long-press, no "view details". The absence is the design.
  *
  * - available: loud. Solid green-edged card, dark text. A housekeeping location
  *   gets an amber marker so a scattered machine is visible at a glance.
  * - faulty: muted red, with a short reason.
  * - checked out: muted grey, holder name + how long it's been out.
  */
-export function FleetCard({
-  orgSlug,
-  machine,
-}: {
-  orgSlug: string
-  machine: FleetMachine
-}) {
-  const href = `/${orgSlug}/m/${machine.code}`
+export function FleetCard({ machine }: { machine: FleetMachine }) {
   const offStore = machine.currentLocation && machine.currentLocation.type !== 'store'
 
   if (machine.status === 'available') {
     return (
-      <Link
-        href={href}
-        className="flex flex-col gap-1 rounded-xl border-2 border-emerald-600 bg-white p-3 active:bg-emerald-50"
-      >
+      <div className="flex flex-col gap-1 rounded-xl border-2 border-emerald-600 bg-white p-3">
         <span className="flex items-center gap-3">
           <span className="flex-1 min-w-0 truncate text-lg font-bold text-gray-950">
             {machine.name}
@@ -45,16 +38,13 @@ export function FleetCard({
             </span>
           ) : null}
         </span>
-      </Link>
+      </div>
     )
   }
 
   if (machine.status === 'faulty') {
     return (
-      <Link
-        href={href}
-        className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50/60 p-3 active:bg-red-50"
-      >
+      <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50/60 p-3">
         <span className="flex-1 min-w-0">
           <span className="block truncate text-base font-semibold text-red-950">{machine.name}</span>
           <span className="block font-mono text-xs text-red-400">{machine.code}</span>
@@ -67,16 +57,13 @@ export function FleetCard({
         <span className="shrink-0 rounded-full bg-red-600 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
           Faulty
         </span>
-      </Link>
+      </div>
     )
   }
 
   // checked_out
   return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 text-gray-500 active:bg-gray-100"
-    >
+    <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 text-gray-500">
       <span className="flex-1 min-w-0">
         <span className="block truncate text-base font-semibold text-gray-700">{machine.name}</span>
         <span className="block font-mono text-xs text-gray-400">{machine.code}</span>
@@ -87,6 +74,6 @@ export function FleetCard({
           <span className="block text-xs text-gray-500">{formatDuration(machine.holder.since)}</span>
         ) : null}
       </span>
-    </Link>
+    </div>
   )
 }

@@ -23,8 +23,8 @@ const CODE = 'VAC-001'
 // --- raw helpers (BYPASSRLS "postgres" role — sees every row) ---------------
 
 async function machineRow(code: string) {
-  return rows<{ id: string; status: string; current_location_id: string | null; template_id: string | null }>(
-    await db.execute(sql`select id, status, current_location_id, template_id from machines where code = ${code} limit 1`),
+  return rows<{ id: string; slug: string; status: string; current_location_id: string | null; template_id: string | null }>(
+    await db.execute(sql`select id, slug, status, current_location_id, template_id from machines where code = ${code} limit 1`),
   )[0]
 }
 
@@ -91,6 +91,8 @@ async function main() {
 
   const machine = await machineRow(CODE)
   if (!machine?.template_id) throw new Error(`${CODE} not found or has no template — run pnpm db:seed`)
+  // The URL identifier is the random slug now, not the human code.
+  const machineSlug = machine.slug
 
   const items = rows<{ id: string; blocking: boolean; sort_order: number }>(
     await db.execute(
@@ -114,7 +116,7 @@ async function main() {
     const res = await performCheckOut({
       orgId: demoOrgId,
       employeeId: maria,
-      code: CODE,
+      slug: machineSlug,
       responses: allPass(),
     })
     const m = await machineRow(CODE)
@@ -138,7 +140,7 @@ async function main() {
     const res = await performCheckOut({
       orgId: demoOrgId,
       employeeId: james,
-      code: CODE,
+      slug: machineSlug,
       responses: allPass(),
     })
     report(
@@ -158,7 +160,7 @@ async function main() {
       res2b = await performCheckOut({
         orgId: demoOrgId,
         employeeId: james,
-        code: CODE,
+        slug: machineSlug,
         responses: allPass(),
       })
     } catch {
@@ -183,8 +185,8 @@ async function main() {
     for (let i = 0; i < 10; i += 1) {
       await resetMachine(machine.id, storeId)
       const [a, b] = await Promise.all([
-        performCheckOut({ orgId: demoOrgId, employeeId: maria, code: CODE, responses: allPass() }),
-        performCheckOut({ orgId: demoOrgId, employeeId: james, code: CODE, responses: allPass() }),
+        performCheckOut({ orgId: demoOrgId, employeeId: maria, slug: machineSlug, responses: allPass() }),
+        performCheckOut({ orgId: demoOrgId, employeeId: james, slug: machineSlug, responses: allPass() }),
       ])
       const oks = [a, b].filter((r) => r.ok).length
       const takens = [a, b].filter((r) => !r.ok && r.reason === 'taken').length
@@ -212,7 +214,7 @@ async function main() {
     const res = await performCheckOut({
       orgId: demoOrgId,
       employeeId: maria,
-      code: CODE,
+      slug: machineSlug,
       responses: withFail(blockingItem.id),
     })
     const open = await openCheckouts(machine.id)
@@ -231,7 +233,7 @@ async function main() {
     const res = await performCheckOut({
       orgId: demoOrgId,
       employeeId: maria,
-      code: CODE,
+      slug: machineSlug,
       responses: withFail(nonBlockingItem.id),
     })
     const open = await openCheckouts(machine.id)
@@ -255,7 +257,7 @@ async function main() {
     const res = await performCheckIn({
       orgId: demoOrgId,
       employeeId: maria,
-      code: CODE,
+      slug: machineSlug,
       returnLocationId: storeId,
       faultReported: false,
     })
@@ -278,11 +280,11 @@ async function main() {
   // ---- 7. Check-in to a housekeeping location ---------------------------
   {
     await resetMachine(machine.id, storeId)
-    await performCheckOut({ orgId: demoOrgId, employeeId: maria, code: CODE, responses: allPass() })
+    await performCheckOut({ orgId: demoOrgId, employeeId: maria, slug: machineSlug, responses: allPass() })
     const res = await performCheckIn({
       orgId: demoOrgId,
       employeeId: maria,
-      code: CODE,
+      slug: machineSlug,
       returnLocationId: housekeepingId,
       faultReported: false,
     })
@@ -297,11 +299,11 @@ async function main() {
   // ---- 8. Check-in with a fault: incident + final status 'faulty' -------
   {
     await resetMachine(machine.id, storeId)
-    await performCheckOut({ orgId: demoOrgId, employeeId: maria, code: CODE, responses: allPass() })
+    await performCheckOut({ orgId: demoOrgId, employeeId: maria, slug: machineSlug, responses: allPass() })
     const res = await performCheckIn({
       orgId: demoOrgId,
       employeeId: maria,
-      code: CODE,
+      slug: machineSlug,
       returnLocationId: storeId,
       faultReported: true,
       faultDescription: 'Grinding noise from the motor.',
@@ -325,11 +327,11 @@ async function main() {
   // ---- 9. Check-in on someone else's checkout is rejected --------------
   {
     await resetMachine(machine.id, storeId)
-    await performCheckOut({ orgId: demoOrgId, employeeId: maria, code: CODE, responses: allPass() })
+    await performCheckOut({ orgId: demoOrgId, employeeId: maria, slug: machineSlug, responses: allPass() })
     const res = await performCheckIn({
       orgId: demoOrgId,
       employeeId: james, // not the holder
-      code: CODE,
+      slug: machineSlug,
       returnLocationId: storeId,
       faultReported: false,
     })

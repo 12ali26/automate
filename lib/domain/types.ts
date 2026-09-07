@@ -35,6 +35,9 @@ export interface ChecklistItem {
 
 export interface Machine {
   id: string
+  /** Random, unguessable identifier used in the URL. Never the human `code`. */
+  slug: string
+  /** Human-facing identifier said out loud (VAC-001). Not in the URL. */
   code: string
   name: string
   status: MachineStatus

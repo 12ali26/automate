@@ -19,7 +19,7 @@ import { checkoutSubmissionSchema } from '@/lib/validation/checkout'
 
 export async function checkOutAction(
   orgSlug: string,
-  code: string,
+  slug: string,
   payload: unknown,
 ): Promise<CheckOutResult> {
   const parsed = checkoutSubmissionSchema.safeParse(payload)
@@ -29,22 +29,22 @@ export async function checkOutAction(
   if (!org) notFound()
 
   const session = await getStaffSession(org.id)
-  if (!session) redirect(`/${orgSlug}/id?next=${encodeURIComponent(`/${orgSlug}/m/${code}/checkout`)}`)
+  if (!session) redirect(`/${orgSlug}/id?next=${encodeURIComponent(`/${orgSlug}/m/${slug}/checkout`)}`)
 
   const result = await performCheckOut({
     orgId: org.id,
     employeeId: session.employeeId,
-    code,
+    slug,
     responses: parsed.data.responses,
   })
 
-  if (result.ok) redirect(`/${orgSlug}/m/${code}?done=checkout`)
+  if (result.ok) redirect(`/${orgSlug}/m/${slug}?done=checkout`)
   return result
 }
 
 export async function checkInAction(
   orgSlug: string,
-  code: string,
+  slug: string,
   payload: unknown,
 ): Promise<CheckInResult> {
   const parsed = checkinSubmissionSchema.safeParse(payload)
@@ -54,17 +54,17 @@ export async function checkInAction(
   if (!org) notFound()
 
   const session = await getStaffSession(org.id)
-  if (!session) redirect(`/${orgSlug}/id?next=${encodeURIComponent(`/${orgSlug}/m/${code}/checkin`)}`)
+  if (!session) redirect(`/${orgSlug}/id?next=${encodeURIComponent(`/${orgSlug}/m/${slug}/checkin`)}`)
 
   const result = await performCheckIn({
     orgId: org.id,
     employeeId: session.employeeId,
-    code,
+    slug,
     returnLocationId: parsed.data.returnLocationId,
     faultReported: parsed.data.faultReported,
     faultDescription: parsed.data.faultDescription ?? null,
   })
 
-  if (result.ok) redirect(`/${orgSlug}/m/${code}?done=checkin`)
+  if (result.ok) redirect(`/${orgSlug}/m/${slug}?done=checkin`)
   return result
 }

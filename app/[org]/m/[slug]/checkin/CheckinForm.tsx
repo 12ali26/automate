@@ -15,13 +15,13 @@ const FAILURE_MESSAGE: Record<CheckInFailure, string> = {
 
 export function CheckinForm({
   orgSlug,
-  code,
+  slug,
   locations,
   defaultLocationId,
   backHref,
 }: {
   orgSlug: string
-  code: string
+  slug: string
   locations: Location[]
   defaultLocationId: string
   backHref: string
@@ -39,7 +39,7 @@ export function CheckinForm({
     if (!canSubmit) return
     setFailure(null)
     startTransition(async () => {
-      const result = await checkInAction(orgSlug, code, {
+      const result = await checkInAction(orgSlug, slug, {
         returnLocationId: locationId,
         faultReported: faultOpen,
         faultDescription: faultOpen ? description.trim() : null,

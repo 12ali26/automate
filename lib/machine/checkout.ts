@@ -29,7 +29,8 @@ export type CheckOutResult =
 export interface PerformCheckOutInput {
   orgId: string
   employeeId: string
-  code: string
+  /** The machine's URL slug (not its human code). */
+  slug: string
   responses: { itemId: string; passed: boolean; note?: string | null }[]
 }
 
@@ -48,7 +49,7 @@ export async function performCheckOut(
   try {
     const result = await withOrgContext(input.orgId, async (tx) => {
       // 1. Lock the machine row — serialises against a concurrent checkout.
-      const machine = await machinesRepo.lockByCode(tx, input.code)
+      const machine = await machinesRepo.lockBySlug(tx, input.slug)
       if (!machine || !machine.active) throw new Abort('not-found')
 
       // 2. Status must be 'available'. A checked_out machine reports as 'taken'

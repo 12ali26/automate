@@ -10,13 +10,7 @@ import { InstallPrompt } from './InstallPrompt'
 
 const FILTER_KEY = 'automate:fleet:available-only'
 
-export function FleetView({
-  orgSlug,
-  machines,
-}: {
-  orgSlug: string
-  machines: FleetMachine[]
-}) {
+export function FleetView({ machines }: { machines: FleetMachine[] }) {
   const [availableOnly, setAvailableOnly] = useState(false)
 
   // Read the persisted choice after mount to avoid a hydration mismatch.
@@ -82,7 +76,6 @@ export function FleetView({
       {locationGroups.map((group) => (
         <LocationGroupSection
           key={group.location.id}
-          orgSlug={orgSlug}
           group={group}
           availableOnly={availableOnly}
         />
@@ -95,11 +88,11 @@ export function FleetView({
           </h2>
           <div className="flex flex-col gap-2">
             {unplacedAvailable.map((m) => (
-              <FleetCard key={m.id} orgSlug={orgSlug} machine={m} />
+              <FleetCard key={m.id} machine={m} />
             ))}
             {!availableOnly &&
               unplacedFaulty.map((m) => (
-                <FleetCard key={m.id} orgSlug={orgSlug} machine={m} />
+                <FleetCard key={m.id} machine={m} />
               ))}
           </div>
         </section>
@@ -112,7 +105,7 @@ export function FleetView({
           </h2>
           <div className="flex flex-col gap-2">
             {out.map((m) => (
-              <FleetCard key={m.id} orgSlug={orgSlug} machine={m} />
+              <FleetCard key={m.id} machine={m} />
             ))}
           </div>
         </section>
@@ -122,11 +115,9 @@ export function FleetView({
 }
 
 function LocationGroupSection({
-  orgSlug,
   group,
   availableOnly,
 }: {
-  orgSlug: string
   group: FleetLocationGroup
   availableOnly: boolean
 }) {
@@ -172,10 +163,10 @@ function LocationGroupSection({
       ) : (
         <div className="flex flex-col gap-2">
           {available.map((m) => (
-            <FleetCard key={m.id} orgSlug={orgSlug} machine={m} />
+            <FleetCard key={m.id} machine={m} />
           ))}
           {showFaulty
-            ? faulty.map((m) => <FleetCard key={m.id} orgSlug={orgSlug} machine={m} />)
+            ? faulty.map((m) => <FleetCard key={m.id} machine={m} />)
             : null}
           {showOutLine ? (
             <p className="px-1 text-xs text-gray-400">

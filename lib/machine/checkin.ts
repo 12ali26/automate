@@ -24,7 +24,8 @@ export type CheckInResult =
 export interface PerformCheckInInput {
   orgId: string
   employeeId: string
-  code: string
+  /** The machine's URL slug (not its human code). */
+  slug: string
   returnLocationId: string
   faultReported: boolean
   faultDescription?: string | null
@@ -47,7 +48,7 @@ export async function performCheckIn(
 
   try {
     const result = await withOrgContext(input.orgId, async (tx) => {
-      const machine = await machinesRepo.lockByCode(tx, input.code)
+      const machine = await machinesRepo.lockBySlug(tx, input.slug)
       if (!machine || !machine.active) throw new Abort('not-found')
 
       // 1. Lock the open checkout. 2. It must exist and be this employee's —

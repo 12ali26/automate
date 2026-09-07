@@ -130,6 +130,9 @@ export const machines = pgTable(
   {
     id: pk(),
     orgId: orgId(),
+    // Random, unguessable — this is what goes in the URL (/{org}/m/{slug}).
+    slug: text('slug').notNull(),
+    // Human-facing identifier (VAC-001). Said out loud; never in the URL.
     code: text('code').notNull(),
     name: text('name').notNull(),
     templateId: uuid('template_id').references(() => checklistTemplates.id),
@@ -140,6 +143,7 @@ export const machines = pgTable(
   },
   (t) => [
     unique('machines_org_id_code_unique').on(t.orgId, t.code),
+    unique('machines_org_id_slug_unique').on(t.orgId, t.slug),
     check(
       'machines_status_check',
       sql`${t.status} in ('available', 'checked_out', 'faulty')`,

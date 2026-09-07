@@ -16,13 +16,13 @@ export const revalidate = 0
 export default async function CheckoutPage({
   params,
 }: {
-  params: Promise<{ org: string; code: string }>
+  params: Promise<{ org: string; slug: string }>
 }) {
-  const { org: slug, code } = await params
-  const { org } = await requireStaffSession(slug)
+  const { org: orgSlug, slug: machineSlug } = await params
+  const { org } = await requireStaffSession(orgSlug)
 
   const data = await withOrgContext(org.id, async (tx) => {
-    const machine = await machinesRepo.findByCode(tx, code)
+    const machine = await machinesRepo.findBySlug(tx, machineSlug)
     if (!machine || !machine.active) return null
 
     const items =
@@ -36,7 +36,7 @@ export default async function CheckoutPage({
   if (!data) notFound()
   const { machine, items } = data
 
-  const backHref = `/${slug}/m/${code}`
+  const backHref = `/${orgSlug}/m/${machineSlug}`
 
   // Re-verified on load: if it isn't available now, don't show the form.
   if (machine.status !== 'available') {
@@ -69,7 +69,7 @@ export default async function CheckoutPage({
       <p className="text-base font-semibold uppercase tracking-wide text-gray-600">
         Checkout
       </p>
-      <CheckoutForm orgSlug={slug} code={code} items={items} backHref={backHref} />
+      <CheckoutForm orgSlug={orgSlug} slug={machineSlug} items={items} backHref={backHref} />
     </main>
   )
 }

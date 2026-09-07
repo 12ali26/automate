@@ -32,17 +32,17 @@ export default async function MachinePage({
   params,
   searchParams,
 }: {
-  params: Promise<{ org: string; code: string }>
+  params: Promise<{ org: string; slug: string }>
   searchParams: Promise<{ done?: string | string[] }>
 }) {
-  const { org: slug, code } = await params
+  const { org: orgSlug, slug: machineSlug } = await params
   const { done } = await searchParams
   const doneMessage = typeof done === 'string' ? DONE_MESSAGE[done] : undefined
-  const { session, org } = await requireStaffSession(slug)
+  const { session, org } = await requireStaffSession(orgSlug)
 
   const data = await withOrgContext(org.id, async (tx) => {
-    const machine = await machinesRepo.findByCode(tx, code)
-    // Never disclose whether the code exists in another org.
+    const machine = await machinesRepo.findBySlug(tx, machineSlug)
+    // Never disclose whether the slug exists in another org.
     if (!machine || !machine.active) return null
 
     // Sequential: a transaction is a single connection.
@@ -110,7 +110,7 @@ export default async function MachinePage({
         </p>
       ) : null}
       <MachineStatus view={statusView} />
-      <MachineStateView view={view} basePath={`/${slug}/m/${code}`} />
+      <MachineStateView view={view} basePath={`/${orgSlug}/m/${machineSlug}`} />
     </main>
   )
 }
