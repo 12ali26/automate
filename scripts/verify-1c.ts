@@ -33,9 +33,18 @@ async function main() {
   )[0]?.id
   if (!demoOrgId) throw new Error('demo org not found — run pnpm db:seed')
 
-  // 1. Fleet list under demo context -> the 5 seeded machines.
+  // Expected fleet size = however many ACTIVE machines the seed made for demo
+  // (listForFleet filters on active). Derived, not a literal, so a later seed
+  // change doesn't make this red for no real reason.
+  const seededFleet = rows<{ n: number }>(
+    await db.execute(
+      sql`select count(*)::int as n from machines where org_id = ${demoOrgId} and active = true`,
+    ),
+  )[0].n
+
+  // 1. Fleet list under demo context -> exactly the demo org's active machines.
   const fleet = await withOrgContext(demoOrgId, (tx) => machines.listForFleet(tx))
-  report('1. listForFleet under demo context', fleet.length === 5, `${fleet.length} machines (want 5)`)
+  report('1. listForFleet under demo context', fleet.length === seededFleet, `${fleet.length} machines (want ${seededFleet})`)
 
   // 2. Fleet list under a random (non-existent) org id -> nothing.
   const otherFleet = await withOrgContext(randomUUID(), (tx) => machines.listForFleet(tx))
@@ -66,7 +75,7 @@ async function main() {
       const list = await machines.listForFleet(tx)
       return { seen: seenRow.v, count: list.length }
     })
-    const wantCount = useDemo ? 5 : 0
+    const wantCount = useDemo ? seededFleet : 0
     if (seen !== orgId || count !== wantCount) {
       leak = true
       notes.push(`iter ${i}: ctx=${seen ?? 'null'} want ${orgId}, count=${count} want ${wantCount}`)

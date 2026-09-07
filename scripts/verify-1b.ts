@@ -54,6 +54,13 @@ async function main() {
     'demo org (run pnpm db:seed)',
   )
 
+  // Assert against however many machines the seed actually created, not a
+  // literal — so a later seed change doesn't turn this red for no real reason.
+  const { n: seededMachines } = one<{ n: number }>(
+    await db.execute(sql`select count(*)::int as n from machines where org_id = ${demoOrgId}`),
+    'seeded machine count',
+  )
+
   // 1. No org context → zero rows.
   await db.transaction(async (tx) => {
     await tx.execute(sql`set local role app_authenticated`)
@@ -64,7 +71,7 @@ async function main() {
     report('1. machines without app.current_org', n === 0, `saw ${n} (want 0)`)
   })
 
-  // 2. Demo org context → the 5 seeded machines.
+  // 2. Demo org context → exactly the demo org's seeded machines.
   await db.transaction(async (tx) => {
     await tx.execute(sql`set local role app_authenticated`)
     await tx.execute(sql`select set_config('app.current_org', ${demoOrgId}, true)`)
@@ -72,7 +79,7 @@ async function main() {
       await tx.execute(sql`select count(*)::int as n from machines`),
       'machines count',
     )
-    report('2. machines with demo app.current_org', n === 5, `saw ${n} (want 5)`)
+    report('2. machines with demo app.current_org', n === seededMachines, `saw ${n} (want ${seededMachines})`)
   })
 
   // 3. Opening a checkout flips machine status to checked_out; closing it flips
