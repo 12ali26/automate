@@ -11,11 +11,16 @@ import { StateBadge } from './StateBadge'
  *   current_location_id (its last return spot), so showing that field would
  *   send people to an empty shelf. HolderCard answers "where is it".
  * - faulty: keeps its own prominent red badge, with the location below it.
+ *
+ * `missing` (an open discrepancy) adds a neutral slate marker — deliberately
+ * neither amber (housekeeping) nor red (faulty).
  */
-export type MachineStatusView =
-  | { state: 'available'; locationName: string | null; offStore: boolean }
-  | { state: 'checked_out' }
-  | { state: 'faulty'; locationName: string | null; offStore: boolean }
+export interface MachineStatusView {
+  state: 'available' | 'checked_out' | 'faulty'
+  locationName: string | null
+  offStore: boolean
+  missing: boolean
+}
 
 function LocationText({ name, offStore }: { name: string; offStore: boolean }) {
   if (offStore) {
@@ -29,11 +34,22 @@ function LocationText({ name, offStore }: { name: string; offStore: boolean }) {
   return <span className="text-xl font-extrabold text-gray-950">{name}</span>
 }
 
+function MissingChip() {
+  return (
+    <span className="rounded border border-dashed border-slate-500 bg-slate-100 px-1.5 py-0.5 text-sm font-bold uppercase tracking-wide text-slate-700">
+      Reported missing
+    </span>
+  )
+}
+
 export function MachineStatus({ view }: { view: MachineStatusView }) {
   if (view.state === 'faulty') {
     return (
       <div className="flex flex-col gap-2">
-        <StateBadge state="faulty" />
+        <div className="flex flex-wrap items-center gap-2">
+          <StateBadge state="faulty" />
+          {view.missing ? <MissingChip /> : null}
+        </div>
         {view.locationName ? (
           <LocationText name={view.locationName} offStore={view.offStore} />
         ) : null}
@@ -57,6 +73,7 @@ export function MachineStatus({ view }: { view: MachineStatusView }) {
           <LocationText name={locationName} offStore={offStore} />
         </>
       ) : null}
+      {view.missing ? <MissingChip /> : null}
     </p>
   )
 }

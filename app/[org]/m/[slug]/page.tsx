@@ -7,6 +7,7 @@ import { withOrgContext } from '@/lib/auth/org-context'
 import { requireStaffSession } from '@/lib/auth/session'
 import { formatDuration } from '@/lib/domain/duration'
 import * as checkoutsRepo from '@/lib/repos/checkouts'
+import * as discrepanciesRepo from '@/lib/repos/discrepancies'
 import * as employeesRepo from '@/lib/repos/employees'
 import * as incidentsRepo from '@/lib/repos/incidents'
 import * as machinesRepo from '@/lib/repos/machines'
@@ -26,6 +27,7 @@ const clock = (isoString: string) =>
 const DONE_MESSAGE: Record<string, string> = {
   checkout: 'Checked out. It’s yours now.',
   checkin: 'Checked in. Thanks.',
+  fault: 'Fault reported. A manager will take it from here.',
 }
 
 export default async function MachinePage({
@@ -48,55 +50,74 @@ export default async function MachinePage({
     // Sequential: a transaction is a single connection.
     const checkout = await checkoutsRepo.findOpenForMachine(tx, machine.id)
     const incident = await incidentsRepo.findOpenForMachine(tx, machine.id)
+    const discrepancy = await discrepanciesRepo.findOpenForMachine(tx, machine.id)
 
     const otherHolder =
       checkout && checkout.employeeId !== session.employeeId
         ? await employeesRepo.findById(tx, checkout.employeeId)
         : null
 
-    return { machine, checkout, incident, otherHolder }
+    return { machine, checkout, incident, discrepancy, otherHolder }
   })
 
   if (!data) notFound()
-  const { machine, checkout, incident, otherHolder } = data
+  const { machine, checkout, incident, discrepancy, otherHolder } = data
 
   const location = machine.currentLocation
   // Derived, not stored: last returned somewhere other than the store.
   const offStore = Boolean(location && location.type !== 'store')
+  const mineCheckout = Boolean(checkout && checkout.employeeId === session.employeeId)
+  const basePath = `/${orgSlug}/m/${machineSlug}`
 
-  let view: MachineView
-  if (machine.status === 'faulty') {
-    view = {
-      state: 'faulty',
-      description: incident?.description ?? null,
-      reportedLabel: incident ? clock(incident.createdAt) : null,
-    }
-  } else if (machine.status === 'checked_out' && checkout) {
-    const mine = checkout.employeeId === session.employeeId
-    view = mine
+  // Independent facts — a machine can be held AND faulty at once.
+  const fault =
+    machine.status === 'faulty'
       ? {
-          state: 'out_by_me',
+          description: incident?.description ?? null,
+          reportedLabel: incident ? clock(incident.createdAt) : null,
+        }
+      : null
+
+  const holder: MachineView['holder'] = checkout
+    ? mineCheckout
+      ? {
+          mine: true,
           duration: formatDuration(checkout.openedAt),
           sinceLabel: clock(checkout.openedAt),
         }
       : {
-          state: 'out_by_other',
-          holderName: otherHolder?.fullName ?? 'another employee',
+          mine: false,
+          name: otherHolder?.fullName ?? 'another employee',
           duration: formatDuration(checkout.openedAt),
           sinceLabel: clock(checkout.openedAt),
         }
-  } else {
-    view = { state: 'available' }
+    : null
+
+  const missing = discrepancy !== null
+
+  // "Report a fault" is offered when the machine is available (anyone spotted a
+  // problem) or held by the current employee. Never when it's already faulty or
+  // held by someone else — they report it.
+  const canReportFault =
+    machine.status !== 'faulty' && (machine.status === 'available' || mineCheckout)
+
+  const view: MachineView = {
+    fault,
+    holder,
+    missing,
+    actions: {
+      checkOutHref: machine.status === 'available' ? `${basePath}/checkout` : undefined,
+      checkInHref: mineCheckout ? `${basePath}/checkin` : undefined,
+      reportFaultHref: canReportFault ? `${basePath}/incident` : undefined,
+    },
   }
 
-  // The status/location line. A checked-out machine shows no location — it is
-  // with its holder, not at its last return spot.
-  const statusView: MachineStatusView =
-    view.state === 'faulty'
-      ? { state: 'faulty', locationName: location?.name ?? null, offStore }
-      : view.state === 'available'
-        ? { state: 'available', locationName: location?.name ?? null, offStore }
-        : { state: 'checked_out' }
+  const statusView: MachineStatusView = {
+    state: machine.status,
+    locationName: location?.name ?? null,
+    offStore,
+    missing,
+  }
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-5">
@@ -110,7 +131,7 @@ export default async function MachinePage({
         </p>
       ) : null}
       <MachineStatus view={statusView} />
-      <MachineStateView view={view} basePath={`/${orgSlug}/m/${machineSlug}`} />
+      <MachineStateView view={view} />
     </main>
   )
 }

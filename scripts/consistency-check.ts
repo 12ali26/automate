@@ -31,12 +31,16 @@ async function main() {
     `),
   )
 
-  // b) an open checkout exists but machines.status <> 'checked_out'
+  // b) an open checkout exists but the machine is neither 'checked_out' nor
+  //    'faulty'. Since Stage 6, a fault can be reported on a machine you're
+  //    holding: the status column goes to 'faulty' while the checkout stays
+  //    open. So checked_out + faulty are BOTH legal alongside an open checkout;
+  //    only 'available' with an open checkout is wrong.
   const b = rows(
     await db.execute(sql`
       select m.org_id, m.id, m.code, m.status
       from machines m
-      where m.status <> 'checked_out'
+      where m.status not in ('checked_out', 'faulty')
         and exists (
           select 1 from checkouts c
           where c.machine_id = m.id and c.closed_at is null
@@ -57,17 +61,38 @@ async function main() {
     `),
   )
 
+  // d) a 'faulty' machine with nothing explaining it — no open incident and no
+  //    open checkout. (Faulty + held with its last incident already cleared is
+  //    legal: the open checkout is what keeps it faulty until check-in.)
+  const d = rows(
+    await db.execute(sql`
+      select m.org_id, m.id, m.code
+      from machines m
+      where m.status = 'faulty'
+        and not exists (
+          select 1 from incidents i
+          where i.machine_id = m.id and i.status = 'open'
+        )
+        and not exists (
+          select 1 from checkouts c
+          where c.machine_id = m.id and c.closed_at is null
+        )
+      order by m.org_id, m.code
+    `),
+  )
+
   const report = (label: string, found: Row[]) => {
     console.log(`${label}: ${found.length}`)
     for (const r of found) console.log(`     ${JSON.stringify(r)}`)
   }
 
   console.log('Consistency check (all orgs):')
-  report('  a) status=checked_out, no open checkout ', a)
-  report('  b) open checkout, status<>checked_out   ', b)
-  report('  c) machine with >1 open checkout        ', c)
+  report('  a) status=checked_out, no open checkout       ', a)
+  report('  b) open checkout, status not checked_out/faulty', b)
+  report('  c) machine with >1 open checkout              ', c)
+  report('  d) status=faulty, no open incident or checkout ', d)
 
-  const total = a.length + b.length + c.length
+  const total = a.length + b.length + c.length + d.length
   if (total === 0) {
     console.log('\nOK — no inconsistencies')
     process.exit(0)

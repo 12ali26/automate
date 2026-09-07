@@ -4,10 +4,9 @@ import type { ReactNode } from 'react'
 /**
  * Primary / secondary action buttons for the machine page.
  *
- * With an `href` the control is a real link into a Stage 4 flow (checkout /
- * check-in). Without one it renders at full visual fidelity but does nothing
- * (`aria-disabled`, no handler) — used for actions that belong to a later
- * stage, like "Report a fault" (Stage 6).
+ * With an `href` the control is a real link into a machine flow (check out,
+ * check in, report a fault). Without one it renders at full visual fidelity but
+ * does nothing (`aria-disabled`, no handler).
  *
  * - primary: ~56px tall, full width, in the thumb zone
  * - secondary: a quiet neutral control — grey, no underline, still a 44px tap

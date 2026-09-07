@@ -3,11 +3,12 @@
  * only domain types. The repo (machines.listForFleet) does the joins; this
  * arranges the result for scanning.
  *
- * The one rule that drives the shape: a machine with status 'checked_out' has
- * NO meaningful current location. current_location_id is only its last return
- * spot. So checked-out machines are never listed under a location — they go in
- * a single "out with someone" list. A location may still report how many of its
- * machines are currently out (last returned there), as a count only.
+ * The one rule that drives the shape: a machine that is HELD (has an open
+ * checkout) has NO meaningful current location. current_location_id is only its
+ * last return spot. So held machines are never listed under a location — they
+ * go in a single "out with someone" list, even if they are also faulty (a fault
+ * reported while held). A location may still report how many of its machines
+ * are currently out (last returned there), as a count only.
  */
 
 import type { FleetMachine, Location } from './types'
@@ -16,9 +17,9 @@ export interface FleetLocationGroup {
   location: Location
   /** available machines physically here now — the takeable ones */
   available: FleetMachine[]
-  /** faulty machines here now */
+  /** faulty machines sitting here now (not the ones a person is holding) */
   faulty: FleetMachine[]
-  /** count of checked-out machines whose last return spot was this location */
+  /** count of held machines whose last return spot was this location */
   outCount: number
 }
 
@@ -39,12 +40,15 @@ function byNameThenCode(a: FleetMachine, b: FleetMachine): number {
 }
 
 export function groupFleet(machines: FleetMachine[]): FleetGrouping {
-  const available = machines.filter((m) => m.status === 'available')
-  const faulty = machines.filter((m) => m.status === 'faulty')
+  // "Held" is the dominant physical fact: a held machine is with a person, not
+  // at a location — even when it is also faulty. It goes in `out`, never a
+  // location group.
   const out = machines
-    .filter((m) => m.status === 'checked_out')
+    .filter((m) => m.holder !== null)
     // oldest checkout first == longest currently out
     .sort((a, b) => (a.holder?.since ?? '').localeCompare(b.holder?.since ?? '') || byNameThenCode(a, b))
+  const available = machines.filter((m) => m.status === 'available' && m.holder === null)
+  const faulty = machines.filter((m) => m.status === 'faulty' && m.holder === null)
 
   const groups = new Map<string, FleetLocationGroup>()
   const seenOrder: string[] = []
@@ -97,8 +101,9 @@ export function groupFleet(machines: FleetMachine[]): FleetGrouping {
     out,
     totals: {
       total: machines.length,
-      available: available.length,
-      faulty: faulty.length,
+      // status counts (a faulty machine is counted faulty even while held)
+      available: machines.filter((m) => m.status === 'available').length,
+      faulty: machines.filter((m) => m.status === 'faulty').length,
       out: out.length,
     },
   }

@@ -21,6 +21,7 @@ export type LockedMachine = {
   status: MachineStatus
   active: boolean
   templateId: string | null
+  currentLocationId: string | null
 }
 
 export async function lockBySlug(
@@ -35,9 +36,10 @@ export async function lockBySlug(
     status: MachineStatus
     active: boolean
     template_id: string | null
+    current_location_id: string | null
   }>(
     await tx.execute(sql`
-      select id, slug, code, name, status, active, template_id
+      select id, slug, code, name, status, active, template_id, current_location_id
       from machines
       where slug = ${slug}
       limit 1
@@ -54,6 +56,7 @@ export async function lockBySlug(
     status: r.status,
     active: r.active,
     templateId: r.template_id,
+    currentLocationId: r.current_location_id,
   }
 }
 
@@ -212,6 +215,7 @@ export async function findById(
 
 type FleetRow = {
   id: string
+  slug: string
   code: string
   name: string
   status: MachineStatus
@@ -226,22 +230,28 @@ type FleetRow = {
   inc_id: string | null
   inc_description: string | null
   inc_created_at: string | Date | null
+  disc_id: string | null
+  disc_created_at: string | Date | null
 }
 
 /**
- * Every active machine with its current location, current holder (when checked
- * out) and open incident (when faulty). Single query — no N+1. The partial
- * unique index guarantees at most one open checkout per machine.
+ * Every active machine with its current location, holder (any open checkout),
+ * open incident and open discrepancy. Single query — no N+1.
+ *
+ * holder / openIncident are populated whenever the row exists, NOT gated on
+ * `status`: a machine can be both held and faulty (a fault reported while it
+ * was checked out), and the fleet view needs to show both facts.
  */
 export async function listForFleet(tx: Transaction): Promise<FleetMachine[]> {
   const rows = toRows<FleetRow>(
     await tx.execute(sql`
       select
-        m.id, m.code, m.name, m.status,
+        m.id, m.slug, m.code, m.name, m.status,
         l.id as l_id, l.name as l_name, l.type as l_type, l.active as l_active,
         e.id as e_id, e.full_name as e_full_name, e.fm_id as e_fm_id,
         co.opened_at as co_opened_at,
-        inc.id as inc_id, inc.description as inc_description, inc.created_at as inc_created_at
+        inc.id as inc_id, inc.description as inc_description, inc.created_at as inc_created_at,
+        disc.id as disc_id, disc.created_at as disc_created_at
       from machines m
       left join locations l on l.id = m.current_location_id
       left join lateral (
@@ -259,6 +269,13 @@ export async function listForFleet(tx: Transaction): Promise<FleetMachine[]> {
         order by i.created_at desc
         limit 1
       ) inc on true
+      left join lateral (
+        select d.id, d.created_at
+        from discrepancies d
+        where d.machine_id = m.id and d.status = 'open'
+        order by d.created_at desc
+        limit 1
+      ) disc on true
       where m.active = true
       order by m.code
     `),
@@ -266,6 +283,7 @@ export async function listForFleet(tx: Transaction): Promise<FleetMachine[]> {
 
   return rows.map((r) => ({
     id: r.id,
+    slug: r.slug,
     code: r.code,
     name: r.name,
     status: r.status,
@@ -273,7 +291,7 @@ export async function listForFleet(tx: Transaction): Promise<FleetMachine[]> {
       ? { id: r.l_id, name: r.l_name ?? '', type: r.l_type ?? 'store', active: r.l_active ?? false }
       : null,
     holder:
-      r.status === 'checked_out' && r.e_id && r.co_opened_at
+      r.e_id && r.co_opened_at
         ? {
             employeeId: r.e_id,
             fullName: r.e_full_name ?? '',
@@ -282,8 +300,12 @@ export async function listForFleet(tx: Transaction): Promise<FleetMachine[]> {
           }
         : null,
     openIncident:
-      r.status === 'faulty' && r.inc_id && r.inc_created_at
+      r.inc_id && r.inc_created_at
         ? { id: r.inc_id, description: r.inc_description ?? '', createdAt: iso(r.inc_created_at) }
+        : null,
+    openDiscrepancy:
+      r.disc_id && r.disc_created_at
+        ? { id: r.disc_id, createdAt: iso(r.disc_created_at) }
         : null,
   }))
 }

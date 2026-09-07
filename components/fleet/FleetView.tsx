@@ -10,7 +10,15 @@ import { InstallPrompt } from './InstallPrompt'
 
 const FILTER_KEY = 'automate:fleet:available-only'
 
-export function FleetView({ machines }: { machines: FleetMachine[] }) {
+export function FleetView({
+  orgSlug,
+  machines,
+  flaggedMissing = false,
+}: {
+  orgSlug: string
+  machines: FleetMachine[]
+  flaggedMissing?: boolean
+}) {
   const [availableOnly, setAvailableOnly] = useState(false)
 
   // Read the persisted choice after mount to avoid a hydration mismatch.
@@ -59,6 +67,15 @@ export function FleetView({ machines }: { machines: FleetMachine[] }) {
 
       <InstallPrompt />
 
+      {flaggedMissing ? (
+        <p
+          role="status"
+          className="rounded-xl border border-slate-400 bg-slate-100 px-4 py-3 text-sm font-medium text-slate-800"
+        >
+          Thanks — flagged as not in its expected spot. A supervisor will follow up.
+        </p>
+      ) : null}
+
       {totals.total === 0 ? (
         <p className="rounded-xl border border-dashed border-gray-300 p-6 text-center text-gray-500">
           No machines yet.
@@ -76,6 +93,7 @@ export function FleetView({ machines }: { machines: FleetMachine[] }) {
       {locationGroups.map((group) => (
         <LocationGroupSection
           key={group.location.id}
+          orgSlug={orgSlug}
           group={group}
           availableOnly={availableOnly}
         />
@@ -88,11 +106,11 @@ export function FleetView({ machines }: { machines: FleetMachine[] }) {
           </h2>
           <div className="flex flex-col gap-2">
             {unplacedAvailable.map((m) => (
-              <FleetCard key={m.id} machine={m} />
+              <FleetCard key={m.id} machine={m} orgSlug={orgSlug} />
             ))}
             {!availableOnly &&
               unplacedFaulty.map((m) => (
-                <FleetCard key={m.id} machine={m} />
+                <FleetCard key={m.id} machine={m} orgSlug={orgSlug} />
               ))}
           </div>
         </section>
@@ -105,7 +123,7 @@ export function FleetView({ machines }: { machines: FleetMachine[] }) {
           </h2>
           <div className="flex flex-col gap-2">
             {out.map((m) => (
-              <FleetCard key={m.id} machine={m} />
+              <FleetCard key={m.id} machine={m} orgSlug={orgSlug} />
             ))}
           </div>
         </section>
@@ -115,9 +133,11 @@ export function FleetView({ machines }: { machines: FleetMachine[] }) {
 }
 
 function LocationGroupSection({
+  orgSlug,
   group,
   availableOnly,
 }: {
+  orgSlug: string
   group: FleetLocationGroup
   availableOnly: boolean
 }) {
@@ -163,10 +183,10 @@ function LocationGroupSection({
       ) : (
         <div className="flex flex-col gap-2">
           {available.map((m) => (
-            <FleetCard key={m.id} machine={m} />
+            <FleetCard key={m.id} machine={m} orgSlug={orgSlug} />
           ))}
           {showFaulty
-            ? faulty.map((m) => <FleetCard key={m.id} machine={m} />)
+            ? faulty.map((m) => <FleetCard key={m.id} machine={m} orgSlug={orgSlug} />)
             : null}
           {showOutLine ? (
             <p className="px-1 text-xs text-gray-400">

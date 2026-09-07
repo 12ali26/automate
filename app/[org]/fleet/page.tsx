@@ -10,13 +10,18 @@ export const revalidate = 30
 
 export default async function FleetPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ org: string }>
+  searchParams: Promise<{ flagged?: string | string[] }>
 }) {
   const { org: slug } = await params
+  const { flagged } = await searchParams
   const { org } = await requireStaffSession(slug)
 
   const machines = await withOrgContext(org.id, (tx) => machinesRepo.listForFleet(tx))
 
-  return <FleetView machines={machines} />
+  return (
+    <FleetView orgSlug={slug} machines={machines} flaggedMissing={flagged === 'missing'} />
+  )
 }

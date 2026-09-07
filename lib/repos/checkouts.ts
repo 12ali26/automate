@@ -109,6 +109,26 @@ export async function closeCheckout(
   `)
 }
 
+/**
+ * The most recently closed checkout for a machine — the last person known to
+ * have had it. Used when reporting a discrepancy to link the report to who
+ * last returned it. Null if the machine has never been checked out.
+ */
+export async function findLastClosedForMachine(
+  tx: Transaction,
+  machineId: string,
+): Promise<Checkout | null> {
+  const rows = toRows<Row>(
+    await tx.execute(sql`
+      ${select}
+      where machine_id = ${machineId} and closed_at is not null
+      order by closed_at desc
+      limit 1
+    `),
+  )
+  return rows[0] ? map(rows[0]) : null
+}
+
 /** All currently-open checkouts held by an employee, newest first. */
 export async function listOpenForEmployee(
   tx: Transaction,
