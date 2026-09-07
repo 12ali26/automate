@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 
 import { sql } from 'drizzle-orm'
 
+import { createManagerAuthUser, deleteManagerAuthUser } from '@/lib/auth/admin-provisioning'
 import { signManagerToken, verifyManagerToken } from '@/lib/auth/manager-session-token'
 import { withOrgContext } from '@/lib/auth/org-context'
 import { signStaffToken } from '@/lib/auth/session-token'
@@ -225,6 +226,47 @@ async function main() {
   {
     const c = await consistencyOk()
     report('9. consistency-check passes', c.ok, `a=${c.a} b=${c.b} c=${c.c} d=${c.d}`)
+  }
+
+  // ---- 10. seed provisioned the demo manager via the Admin API -----
+  {
+    // The seed ran createManagerAuthUser; a re-run with the same email must be
+    // a HANDLED 'already-exists' (never a throw / 500), resolving the same id.
+    let threw = false
+    let dup: Awaited<ReturnType<typeof createManagerAuthUser>> | null = null
+    try {
+      dup = await createManagerAuthUser(MANAGER_EMAIL, MANAGER_PASSWORD)
+    } catch {
+      threw = true
+    }
+    report(
+      "10. duplicate provisioning is a handled 'already-exists', not a 500",
+      !threw &&
+        dup !== null &&
+        dup.ok === false &&
+        dup.reason === 'already-exists' &&
+        dup.authUserId === manager.auth_user_id,
+      `threw=${threw}, result=${JSON.stringify(dup)}, want authUserId=${manager.auth_user_id}`,
+    )
+  }
+
+  // ---- 11. delete works; deleted manager can no longer log in ------
+  {
+    const email = `verify7-del-${randomUUID().slice(0, 8)}@automate-demo.dev`
+    const password = 'Verify7-Delete-Aa1!'
+    const created = await createManagerAuthUser(email, password)
+    const createdId = created.ok ? created.authUserId : ''
+    const loginBefore = await signInWithPassword(email, password)
+    if (createdId) await deleteManagerAuthUser(createdId)
+    const loginAfter = await signInWithPassword(email, password)
+    report(
+      '11. deleteManagerAuthUser: login works before delete, fails after',
+      created.ok &&
+        loginBefore.ok === true &&
+        loginAfter.ok === false &&
+        loginAfter.reason === 'invalid-credentials',
+      `created=${created.ok}, loginBefore=${loginBefore.ok}, loginAfter=${JSON.stringify(loginAfter)}`,
+    )
   }
 
   console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) FAILED.`)

@@ -1,5 +1,11 @@
 import type { NextConfig } from 'next'
 
+import { assertServiceRoleKeyIsPrivate } from './lib/auth/service-key-guard'
+
+// Fail the build / server start if the Supabase service-role key has been
+// copied into any client-exposed (NEXT_PUBLIC_*) env var.
+assertServiceRoleKeyIsPrivate()
+
 // When the app is reached through a reverse proxy (GitHub Codespaces port
 // forwarding, in particular), the browser's Origin header is the public
 // *.app.github.dev host while the server sees localhost. Next.js's Server

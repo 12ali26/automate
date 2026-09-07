@@ -2,9 +2,9 @@ import { loadEnvConfig } from '@next/env'
 
 import { and, eq, isNull, sql } from 'drizzle-orm'
 
+import { createManagerAuthUser } from '../lib/auth/admin-provisioning'
 import { generateMachineSlug } from '../lib/domain/machine-code'
 import { db } from '../lib/db'
-import { provisionManagerAuthUser } from './manager-auth'
 import {
   checklistItems,
   checklistTemplates,
@@ -186,12 +186,16 @@ async function seed() {
     })
 
   // --- manager auth --------------------------------------------------
-  // Robert Adeyemi (FM 1010) is the manager. Give him real credentials via
-  // Supabase Auth and link the auth user to his employee row.
-  const managerAuthUserId = await provisionManagerAuthUser({
-    email: DEMO_MANAGER_EMAIL,
-    password: DEMO_MANAGER_PASSWORD,
-  })
+  // Robert Adeyemi (FM 1010) is the manager. Create his Supabase Auth user via
+  // the Admin API (email pre-confirmed) and link it to his employee row.
+  // Idempotent: a re-seed hits "already-exists" and reuses the same id.
+  const provisioned = await createManagerAuthUser(DEMO_MANAGER_EMAIL, DEMO_MANAGER_PASSWORD)
+  if (!provisioned.ok && provisioned.reason !== 'already-exists') {
+    throw new Error(
+      `Could not provision the demo manager auth user: ${provisioned.reason} — ${provisioned.detail}`,
+    )
+  }
+  const managerAuthUserId = provisioned.authUserId
   await db.execute(sql`
     update employees set auth_user_id = ${managerAuthUserId}
     where org_id = ${org.id} and fm_id = '1010'

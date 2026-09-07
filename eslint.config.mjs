@@ -11,6 +11,13 @@ const noDbImport = {
       message:
         'Do not import lib/db.ts here. Data access goes through lib/repos/*; only lib/repos/, lib/auth/, scripts/ and db/seed.ts may import it directly.',
     },
+    {
+      // The Supabase service-role key bypasses RLS. Provisioning is a
+      // seed/test-only concern — keep it out of app code.
+      group: ['@/lib/auth/admin-provisioning', '**/lib/auth/admin-provisioning'],
+      message:
+        'admin-provisioning uses the service-role key (bypasses RLS). Import it only from scripts/ or db/seed.ts.',
+    },
   ],
 }
 
@@ -35,7 +42,7 @@ export default [
     },
   },
   {
-    files: ['lib/repos/**', 'lib/auth/**', 'scripts/**', 'db/seed.ts', 'db/manager-auth.ts'],
+    files: ['lib/repos/**', 'lib/auth/**', 'scripts/**', 'db/seed.ts'],
     rules: {
       'no-restricted-imports': 'off',
     },
