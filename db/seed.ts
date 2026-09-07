@@ -34,6 +34,7 @@ async function seed() {
     .values([
       { orgId: org.id, name: 'Basement Store', type: 'store' },
       { orgId: org.id, name: 'Housekeeping 4', type: 'housekeeping' },
+      { orgId: org.id, name: 'Housekeeping 9', type: 'housekeeping' },
     ])
     .onConflictDoNothing({ target: [locations.orgId, locations.name] })
 
@@ -109,11 +110,14 @@ async function seed() {
   }
 
   // --- machines --------------------------------------------------------
-  // Idempotent via the (org_id, code) unique constraint.
+  // 15 machines so the fleet view (Stage 5) has something realistic to group:
+  // a mix of available / checked out / faulty across three locations, with one
+  // location (Housekeeping 9) whose machines are all out. VAC-001..005 keep the
+  // exact states the earlier stages rely on. Idempotent via (org_id, code).
   await db
     .insert(machines)
     .values(
-      Array.from({ length: 5 }, (_, i) => ({
+      Array.from({ length: 15 }, (_, i) => ({
         orgId: org.id,
         code: `VAC-${String(i + 1).padStart(3, '0')}`,
         name: `Vacuum ${i + 1}`,
@@ -160,32 +164,46 @@ async function seed() {
       set: { fullName: sql`excluded.full_name`, role: sql`excluded.role` },
     })
 
-  // --- machine states (Stage 3: one machine per rendering) ------------
+  // --- machine states ------------------------------------------------
   // Re-read machines and employees now that they exist.
   const machineRows = await db.select().from(machines).where(eq(machines.orgId, org.id))
   const employeeRows = await db.select().from(employees).where(eq(employees.orgId, org.id))
   const machineByCode = (code: string) => machineRows.find((m) => m.code === code)
   const employeeByFm = (fmId: string) => employeeRows.find((e) => e.fmId === fmId)
-  const housekeeping = locationRows.find((l) => l.name === 'Housekeeping 4')
+  const hk4 = locationRows.find((l) => l.name === 'Housekeeping 4')
+  const hk9 = locationRows.find((l) => l.name === 'Housekeeping 9')
+  if (!hk4 || !hk9) throw new Error('housekeeping locations missing after insert')
 
-  // VAC-001 stays available at the store (default).
-
-  // VAC-002: available, but last returned to a housekeeping location so the
-  // page shows the amber "at Housekeeping 4" marker (derived from type).
-  const vac002 = machineByCode('VAC-002')
-  if (vac002 && housekeeping) {
-    await db
-      .update(machines)
-      .set({ currentLocationId: housekeeping.id })
-      .where(eq(machines.id, vac002.id))
+  // Where each machine currently sits (for checked-out machines this is the
+  // last return spot, not where they are — the fleet view treats it as a count
+  // only). VAC-001 and any code not listed stay at the store (the insert
+  // default).
+  const locationPlan: Record<string, string> = {
+    'VAC-002': hk4.id, // available, last left in housekeeping -> amber marker
+    'VAC-008': hk4.id, // available in housekeeping
+    'VAC-009': hk4.id, // faulty in housekeeping
+    'VAC-011': hk4.id, // out, last returned to hk4
+    'VAC-012': hk9.id, // out, last returned to hk9
+    'VAC-013': hk9.id, // out, last returned to hk9
+    'VAC-014': hk9.id, // out, last returned to hk9  -> hk9 has zero available
+  }
+  for (const [code, locationId] of Object.entries(locationPlan)) {
+    const machine = machineByCode(code)
+    if (machine) {
+      await db.update(machines).set({ currentLocationId: locationId }).where(eq(machines.id, machine.id))
+    }
   }
 
-  // VAC-003 checked out by 1001, VAC-004 by 1002. The sync_machine_status
-  // trigger flips machines.status to 'checked_out' on insert. Backdated so the
-  // page renders a real duration.
+  // Open checkouts. The sync_machine_status trigger flips machines.status to
+  // 'checked_out' on insert. Backdated so the fleet view shows real durations.
   const checkoutPlan: Array<{ code: string; fmId: string; minutesAgo: number }> = [
     { code: 'VAC-003', fmId: '1001', minutesAgo: 135 }, // "2h 15m"
     { code: 'VAC-004', fmId: '1002', minutesAgo: 4400 }, // "3d 1h"
+    { code: 'VAC-010', fmId: '1003', minutesAgo: 40 }, // "40m"
+    { code: 'VAC-011', fmId: '1004', minutesAgo: 310 }, // "5h 10m"
+    { code: 'VAC-012', fmId: '1005', minutesAgo: 90 }, // "1h 30m"
+    { code: 'VAC-013', fmId: '1006', minutesAgo: 1500 }, // "1d 1h"
+    { code: 'VAC-014', fmId: '1007', minutesAgo: 22 }, // "22m"
   ]
   for (const plan of checkoutPlan) {
     const machine = machineByCode(plan.code)
@@ -205,21 +223,26 @@ async function seed() {
     }
   }
 
-  // VAC-005: faulty, with an open incident.
-  const vac005 = machineByCode('VAC-005')
-  if (vac005) {
-    await db.update(machines).set({ status: 'faulty' }).where(eq(machines.id, vac005.id))
-    const reporter = employeeByFm('1002')
+  // Faulty machines, each with an open incident.
+  const faultPlan: Array<{ code: string; fmId: string; description: string }> = [
+    { code: 'VAC-005', fmId: '1002', description: 'Loud grinding from the brush motor and a hot smell.' },
+    { code: 'VAC-009', fmId: '1004', description: 'Power cable outer sheath split near the plug.' },
+  ]
+  for (const plan of faultPlan) {
+    const machine = machineByCode(plan.code)
+    const reporter = employeeByFm(plan.fmId)
+    if (!machine) continue
+    await db.update(machines).set({ status: 'faulty' }).where(eq(machines.id, machine.id))
     const openIncident = await db
       .select()
       .from(incidents)
-      .where(and(eq(incidents.machineId, vac005.id), eq(incidents.status, 'open')))
+      .where(and(eq(incidents.machineId, machine.id), eq(incidents.status, 'open')))
     if (openIncident.length === 0 && reporter) {
       await db.insert(incidents).values({
         orgId: org.id,
-        machineId: vac005.id,
+        machineId: machine.id,
         employeeId: reporter.id,
-        description: 'Loud grinding from the brush motor and a hot smell.',
+        description: plan.description,
         status: 'open',
       })
     }
@@ -237,7 +260,7 @@ async function seed() {
     db.select().from(employees).where(eq(employees.orgId, org.id)),
   ])
 
-  const statusOf = (code: string) => machs.find((m) => m.code === code)?.status
+  const countStatus = (s: string) => machs.filter((m) => m.status === s).length
   console.log('Seed complete for org "demo":')
   console.log(`  locations:        ${byOrg(locs)}`)
   console.log(`  checklist templates: ${byOrg(tmpls)}`)
@@ -246,12 +269,11 @@ async function seed() {
   console.log(
     `  employees:        ${byOrg(emps)} (${emps.filter((e) => e.role === 'manager').length} manager)`,
   )
-  console.log('  machine states:')
-  console.log(`    VAC-001 available @ store        -> ${statusOf('VAC-001')}`)
-  console.log(`    VAC-002 available @ housekeeping  -> ${statusOf('VAC-002')}`)
-  console.log(`    VAC-003 out by 1001              -> ${statusOf('VAC-003')}`)
-  console.log(`    VAC-004 out by 1002              -> ${statusOf('VAC-004')}`)
-  console.log(`    VAC-005 faulty + open incident   -> ${statusOf('VAC-005')}`)
+  console.log('  fleet mix:')
+  console.log(`    available:    ${countStatus('available')}`)
+  console.log(`    checked out:  ${countStatus('checked_out')}`)
+  console.log(`    faulty:       ${countStatus('faulty')}`)
+  console.log('    Housekeeping 9: all machines checked out (zero available)')
 }
 
 seed()
